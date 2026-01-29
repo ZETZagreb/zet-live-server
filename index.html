@@ -1,76 +1,69 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ZET Live Karta</title>
+    <title>ZET Uživo - Karta</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #map { height: 100vh; width: 100%; background: #e0e0e0; }
-        #loader {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; background: white; padding: 15px 25px;
-            border-radius: 30px; border: 3px solid #0055ff;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center;
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { height: 100vh; width: 100%; background: #f0f0f0; }
+        #info-box {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; background: white; padding: 12px 20px;
+            border-radius: 25px; border: 3px solid #0055ff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold;
         }
-        .vozilo { 
-            font-size: 22px; background: white; border-radius: 50%; 
+        .marker-vozilo { 
+            font-size: 24px; background: white; border-radius: 50%; 
             border: 2px solid #0055ff; text-align: center; 
-            width: 32px; height: 32px; line-height: 32px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            width: 30px; height: 30px; line-height: 30px;
         }
-        .bus { border-color: #ff8800; }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-    <div id="loader">⏳ Čekam ZET server (buđenje može trajati do 60s)...</div>
+    <div id="info-box">⏳ Pokrećem kartu i budim server...</div>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicijalizacija karte Zagreba odmah
-        var map = L.map('map').setView([45.813, 15.977], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        var map = L.map('map').setView([45.813, 15.977], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         var markers = {};
-        var loader = document.getElementById('loader');
+        var info = document.getElementById('info-box');
 
         async function osvjezi() {
             try {
-                // Pozivamo tvoj Render server koji se budi
-                const response = await fetch('https://zet-live-server-1.onrender.com/podaci?cache=' + Date.now());
-                
-                if (!response.ok) throw new Error("Spava");
+                // Pozivamo tvoj Render server koji se trenutno budi
+                const res = await fetch('https://zet-live-server-1.onrender.com/podaci?t=' + Date.now());
+                if (!res.ok) throw new Error();
 
-                const vozila = await response.json();
+                const vozila = await res.json();
                 
                 if (vozila.length > 0) {
-                    loader.style.display = 'none'; // Sakrij loader kad podaci stignu
+                    info.innerText = "✅ UŽIVO: " + vozila.length + " vozila na karti";
+                    info.style.borderColor = "green";
+                    info.style.color = "green";
                 }
 
                 vozila.forEach(v => {
                     let ikona = v.tip === 'tram' ? '🚃' : '🚌';
-                    let klasa = v.tip === 'tram' ? 'vozilo' : 'vozilo bus';
-                    
                     if (markers[v.id]) {
                         markers[v.id].setLatLng([v.lat, v.lon]);
                     } else {
                         markers[v.id] = L.marker([v.lat, v.lon], {
-                            icon: L.divIcon({ html: ikona, className: klasa, iconSize: [32, 32] })
-                        }).addTo(map).bindPopup("<b>Linija: " + v.linija + "</b>");
+                            icon: L.divIcon({ html: ikona, className: 'marker-vozilo', iconSize: [30, 30] })
+                        }).addTo(map).bindPopup("Linija: " + v.linija);
                     }
                 });
             } catch (e) {
-                console.log("Server se još uvijek budi...");
-                loader.innerText = "⏳ Server se još budi... (Render free tier)";
-                loader.style.color = "#ff6600";
+                // Ako server još nije spreman
+                info.innerText = "💤 Server se još budi (obično traje 60s)...";
+                info.style.borderColor = "orange";
             }
         }
 
-        // Svakih 5 sekundi šalji upit - to će ga natjerati da se probudi
-        setInterval(osvjezi, 5000);
+        setInterval(osvjezi, 4000);
         osvjezi();
     </script>
 </body>
