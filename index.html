@@ -1,116 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ZET Live - Karta</title>
+    <title>ZET Live Karta</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        #map { height: 100vh; width: 100%; background-color: #f0f0f0; }
-        body { margin: 0; padding: 0; font-family: sans-serif; }
-        .vozilo-ikona {
-            font-size: 24px;
-            background: white;
-            border: 2px solid blue;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 30px;
-            width: 30px !important;
-            height: 30px !important;
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #map { height: 100vh; width: 100%; background: #e0e0e0; }
+        #loader {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; background: white; padding: 15px 25px;
+            border-radius: 30px; border: 3px solid #0055ff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center;
         }
-        .ikona-bus { border-color: orange; }
-        #status-bar {
-            position: absolute;
-            top: 10px;
-            left: 50px;
-            z-index: 1000;
-            background: white;
-            padding: 8px 15px;
-            border: 2px solid #333;
-            border-radius: 20px;
-            font-weight: bold;
+        .vozilo { 
+            font-size: 22px; background: white; border-radius: 50%; 
+            border: 2px solid #0055ff; text-align: center; 
+            width: 32px; height: 32px; line-height: 32px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
+        .bus { border-color: #ff8800; }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-    <div id="status-bar">Pokretanje karte...</div>
+    <div id="loader">⏳ Čekam ZET server (buđenje može trajati do 60s)...</div>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicijalizacija karte odmah
-        var map = L.map('map').setView([45.815, 15.981], 13);
-        
-        // Dodavanje ulica (OpenStreetMap)
+        // Inicijalizacija karte Zagreba odmah
+        var map = L.map('map').setView([45.813, 15.977], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
         var markers = {};
-        var povijestBrzina = {};
-        var zadnjeVrijeme = Date.now();
-        var statusElement = document.getElementById('status-bar');
-
-        function getDistance(lat1, lon1, lat2, lon2) {
-            var R = 6371e3;
-            var dLat = (lat2 - lat1) * Math.PI / 180;
-            var dLon = (lon2 - lon1) * Math.PI / 180;
-            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                    Math.sin(dLon/2) * Math.sin(dLon/2);
-            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
+        var loader = document.getElementById('loader');
 
         async function osvjezi() {
             try {
-                const sad = Date.now();
-                const dt = (sad - zadnjeVrijeme) / 1000;
+                // Pozivamo tvoj Render server koji se budi
+                const response = await fetch('https://zet-live-server-1.onrender.com/podaci?cache=' + Date.now());
                 
-                // Tvoj Render link
-                const res = await fetch('https://zet-live-server-1.onrender.com/podaci?t=' + sad);
+                if (!response.ok) throw new Error("Spava");
+
+                const vozila = await response.json();
                 
-                if (!res.ok) throw new Error("Server se budi...");
-                
-                const vozila = await res.json();
-                statusElement.innerText = "Uživo: " + vozila.length + " vozila";
-                statusElement.style.color = "green";
+                if (vozila.length > 0) {
+                    loader.style.display = 'none'; // Sakrij loader kad podaci stignu
+                }
 
                 vozila.forEach(v => {
-                    let emoji = v.tip === 'tram' ? '🚃' : '🚌';
-                    let klasa = v.tip === 'tram' ? 'vozilo-ikona' : 'vozilo-ikona ikona-bus';
+                    let ikona = v.tip === 'tram' ? '🚃' : '🚌';
+                    let klasa = v.tip === 'tram' ? 'vozilo' : 'vozilo bus';
                     
                     if (markers[v.id]) {
-                        let staraPos = markers[v.id].getLatLng();
-                        let dist = getDistance(staraPos.lat, staraPos.lng, v.lat, v.lon);
-                        let trenutnaBrzina = (dist / dt) * 3.6;
-                        if (trenutnaBrzina > 100) trenutnaBrzina = 0;
-
-                        if (!povijestBrzina[v.id]) povijestBrzina[v.id] = [];
-                        povijestBrzina[v.id].push(trenutnaBrzina);
-                        if (povijestBrzina[v.id].length > 3) povijestBrzina[v.id].shift();
-
-                        let suma = povijestBrzina[v.id].reduce((a, b) => a + b, 0);
-                        let prosjekBrzina = suma / povijestBrzina[v.id].length;
-                        if (prosjekBrzina < 2) prosjekBrzina = 0;
-
                         markers[v.id].setLatLng([v.lat, v.lon]);
-                        markers[v.id].setPopupContent("<b>Linija: " + v.linija + "</b><br>Brzina: " + prosjekBrzina.toFixed(1) + " km/h");
                     } else {
-                        let myIcon = L.divIcon({ html: emoji, className: klasa, iconSize: [30, 30] });
-                        markers[v.id] = L.marker([v.lat, v.lon], {icon: myIcon}).addTo(map).bindPopup("Linija: " + v.linija);
-                        povijestBrzina[v.id] = [0];
+                        markers[v.id] = L.marker([v.lat, v.lon], {
+                            icon: L.divIcon({ html: ikona, className: klasa, iconSize: [32, 32] })
+                        }).addTo(map).bindPopup("<b>Linija: " + v.linija + "</b>");
                     }
                 });
-                zadnjeVrijeme = sad;
-            } catch (e) { 
-                statusElement.innerText = "Budi se Render server (pričekaj)...";
-                statusElement.style.color = "orange";
+            } catch (e) {
+                console.log("Server se još uvijek budi...");
+                loader.innerText = "⏳ Server se još budi... (Render free tier)";
+                loader.style.color = "#ff6600";
             }
         }
 
-        // Pokreni odmah i ponavljaj svake 4 sekunde
-        setInterval(osvjezi, 4000);
+        // Svakih 5 sekundi šalji upit - to će ga natjerati da se probudi
+        setInterval(osvjezi, 5000);
         osvjezi();
     </script>
 </body>
