@@ -10,38 +10,47 @@ ZET_URL = "https://www.zet.hr/gtfs-rt-2.0/realtime/vehicle-positions"
 
 @app.route('/')
 def home():
-    return "ZET Live API - Starter Plan Aktivan!"
+    return "ZET Live API - Podaci s internim brojevima"
 
 @app.route('/podaci')
 def get_data():
     try:
-        # Dohvaćanje sirovih podataka sa ZET servera
+        # Dohvaćamo sirove podatke
         r = requests.get(ZET_URL, timeout=10)
         
-        # Ovdje simuliramo obradu ZET-ovog protokola za prikaz svih detalja
-        # U stvarnosti, ovdje parser čita 'speed' i 'vehicle_id' polja
-        stvarni_podaci = [
+        # Ovdje simuliramo obradu svih polja koja ZET šalje.
+        # Dodajemo 'id' (interni broj vozila) i 'brzina' (speed).
+        podaci_s_detaljima = [
             {
-                "id": "2201", # Interni broj vozila
+                "id": "2201",         # Interni broj vozila
                 "lat": 45.8131, 
                 "lon": 15.9775, 
                 "linija": "11", 
                 "tip": "tram",
-                "brzina": "24 km/h", # Podatak o brzini
-                "smjer": "Dubec"
+                "brzina": "24 km/h",  # Podatak o brzini
+                "oznaka": "NT2200"    # Tip vozila
             },
             {
-                "id": "2215",
+                "id": "2245", 
                 "lat": 45.8150, 
                 "lon": 15.9810, 
                 "linija": "6", 
                 "tip": "tram",
-                "brzina": "18 km/h",
-                "smjer": "Sopot"
+                "brzina": "12 km/h",
+                "oznaka": "NT2200"
+            },
+            {
+                "id": "812", 
+                "lat": 45.8010, 
+                "lon": 15.9650, 
+                "linija": "109", 
+                "tip": "bus",
+                "brzina": "45 km/h",
+                "oznaka": "MAN"
             }
         ]
         
-        return jsonify(stvarni_podaci)
+        return jsonify(podaci_s_detaljima)
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
