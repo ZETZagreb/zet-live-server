@@ -6,20 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { margin: 0; padding: 0; font-family: sans-serif; }
-        #map { height: 100vh; width: 100%; background: #f0f0f0; }
+        #map { height: 100vh; width: 100%; }
         #status-bar {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
             z-index: 1000; background: white; padding: 12px 25px;
             border-radius: 30px; border: 3px solid #ff0000;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-weight: bold;
-            transition: all 0.5s;
         }
-        .vozilo { font-size: 22px; background: white; border-radius: 50%; border: 2px solid #0055ff; text-align: center; width: 30px; height: 30px; line-height: 30px; }
+        .vozilo { font-size: 22px; background: white; border-radius: 50%; border: 2px solid #0055ff; text-align: center; width: 32px; height: 32px; line-height: 32px; }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-    <div id="status-bar">🚀 Forsiram buđenje servera...</div>
+    <div id="status-bar">🚀 Povezivanje sa Starter serverom...</div>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -28,22 +27,15 @@
         var markers = {};
         var statusBox = document.getElementById('status-bar');
 
-        async function pokusajDohvat() {
+        async function osvjezi() {
             try {
-                // Tvoj link koji se trenutno "finalizira" na Renderu
+                // Pozivamo tvoj Render koji je sada "Live"
                 const res = await fetch('https://zet-live-server-1.onrender.com/podaci?t=' + Date.now());
-                
-                if (!res.ok) {
-                    statusBox.innerText = "⏳ Server je u fazi 'Finalizing startup'...";
-                    return;
-                }
-
                 const vozila = await res.json();
                 
-                if (vozila && vozila.length >= 0) {
-                    statusBox.innerText = "✅ RADI! Vozila: " + vozila.length;
-                    statusBox.style.borderColor = "green";
-                    statusBox.style.color = "green";
+                if (Array.isArray(vozila) && vozila.length > 0) {
+                    // Čim stignu vozila, mičemo tekst "Forsiram buđenje"
+                    statusBox.style.display = 'none';
 
                     vozila.forEach(v => {
                         let ikona = v.tip === 'tram' ? '🚃' : '🚌';
@@ -51,20 +43,18 @@
                             markers[v.id].setLatLng([v.lat, v.lon]);
                         } else {
                             markers[v.id] = L.marker([v.lat, v.lon], {
-                                icon: L.divIcon({ html: ikona, className: 'vozilo', iconSize: [30, 30] })
+                                icon: L.divIcon({ html: ikona, className: 'vozilo', iconSize: [32, 32] })
                             }).addTo(map).bindPopup("Linija: " + v.linija);
                         }
                     });
                 }
             } catch (e) {
-                console.log("Još se budi...");
-                statusBox.innerText = "😴 Render još spava... (Šaljem novi signal)";
+                console.log("Čekam odgovor servera...");
             }
         }
 
-        // Forsiraj svake 3 sekunde - to je najbrži način da ga probudiš!
-        setInterval(pokusajDohvat, 3000);
-        pokusajDohvat();
+        setInterval(osvjezi, 3000);
+        osvjezi();
     </script>
 </body>
 </html>
