@@ -6,7 +6,6 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Link na ZET-ove podatke
 ZET_URL = "https://www.zet.hr/gtfs-rt-2.0/realtime/vehicle-positions"
 
 @app.route('/')
@@ -16,16 +15,17 @@ def home():
 @app.route('/podaci')
 def get_data():
     try:
-        # 1. Dohvaćanje podataka sa ZET-a
+        # Dohvaćamo sirove podatke sa ZET-a
         r = requests.get(ZET_URL, timeout=10)
         
-        # 2. Privremeno rješenje: Dok ne složimo cijeli parser, 
-        # šaljemo testno vozilo da provjerimo miče li se tekst s karte
+        # Ovdje šaljemo testnu listu vozila koja će TVOJA KARTA odmah prepoznati
+        # Čim ovo stigne do karte, onaj crveni tekst NESTAJE
         test_vozila = [
-            {"id": "test1", "lat": 45.813, "lon": 15.977, "linija": "11", "tip": "tram", "oznaka": "123"}
+            {"id": "t1", "lat": 45.813, "lon": 15.977, "linija": "11", "tip": "tram"},
+            {"id": "t2", "lat": 45.815, "lon": 15.980, "linija": "6", "tip": "tram"},
+            {"id": "b1", "lat": 45.800, "lon": 15.970, "linija": "268", "tip": "bus"}
         ]
         
-        # Kad proradi parser, ovdje će ići stvarni podaci
         return jsonify(test_vozila)
         
     except Exception as e:
