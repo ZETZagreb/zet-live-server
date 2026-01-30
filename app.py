@@ -6,28 +6,31 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# URL ZET-ovih podataka (protobuff format)
+# Link na ZET-ove podatke
 ZET_URL = "https://www.zet.hr/gtfs-rt-2.0/realtime/vehicle-positions"
 
 @app.route('/')
-def index():
-    return "ZET Live API je aktivan!"
+def home():
+    return "ZET Live API je aktivan na Starter planu!"
 
 @app.route('/podaci')
 def get_data():
     try:
-        # Povuci svježe podatke sa ZET-a
-        response = requests.get(ZET_URL, timeout=10)
+        # 1. Dohvaćanje podataka sa ZET-a
+        r = requests.get(ZET_URL, timeout=10)
         
-        # Ovdje bi išlo dekodiranje Protobufa, ali za test
-        # ako server samo prosljeđuje status, to je dovoljno.
-        # Ako imaš spreman parser, ovdje se on ubacuje.
+        # 2. Privremeno rješenje: Dok ne složimo cijeli parser, 
+        # šaljemo testno vozilo da provjerimo miče li se tekst s karte
+        test_vozila = [
+            {"id": "test1", "lat": 45.813, "lon": 15.977, "linija": "11", "tip": "tram", "oznaka": "123"}
+        ]
         
-        return jsonify({"status": "ok", "message": "Server je budan!"})
+        # Kad proradi parser, ovdje će ići stvarni podaci
+        return jsonify(test_vozila)
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Render zahtijeva port iz okoline
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
