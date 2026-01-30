@@ -1,24 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ZET Live - Napredna Karta</title>
+    <title>ZET Uživo - Detaljni podaci</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100%; }
-        #status-bar {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; background: white; padding: 10px 20px;
-            border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            font-weight: bold; color: green; border: 2px solid green;
+        .ikona-vozila { 
+            font-size: 22px; background: white; border-radius: 50%; 
+            border: 2px solid #0055ff; text-align: center; 
+            width: 32px; height: 32px; line-height: 32px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
-        .vozilo-ikona { font-size: 22px; background: white; border-radius: 50%; border: 2px solid #0055ff; text-align: center; width: 32px; height: 32px; line-height: 32px; }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-    <div id="status-bar">✅ POVEZANO (Starter Plan)</div>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -32,29 +30,30 @@
                 const vozila = await res.json();
                 
                 if (Array.isArray(vozila)) {
-                    document.getElementById('status-bar').innerText = "✅ Broj vozila: " + vozila.length;
-                    
                     vozila.forEach(v => {
                         let ikona = v.tip === 'tram' ? '🚃' : '🚌';
-                        // HTML sadržaj popupa sa svim podacima
-                        let info = `<b>Linija: ${v.linija}</b><br>
-                                    Smjer: ${v.smjer}<br>
-                                    Brzina: ${v.brzina}<br>
-                                    Interni broj: ${v.id}`;
+                        
+                        // Ovdje ispisujemo ID i brzinu u Popup
+                        let infoProzor = `
+                            <strong>Linija: ${v.linija}</strong><br>
+                            Interni broj: ${v.id}<br>
+                            Brzina: ${v.brzina}<br>
+                            Tip: ${v.oznaka}
+                        `;
 
                         if (markers[v.id]) {
-                            markers[v.id].setLatLng([v.lat, v.lon]).setPopupContent(info);
+                            markers[v.id].setLatLng([v.lat, v.lon]).setPopupContent(infoProzor);
                         } else {
                             markers[v.id] = L.marker([v.lat, v.lon], {
-                                icon: L.divIcon({ html: ikona, className: 'vozilo-ikona', iconSize: [32, 32] })
-                            }).addTo(map).bindPopup(info);
+                                icon: L.divIcon({ html: ikona, className: 'ikona-vozila', iconSize: [32, 32] })
+                            }).addTo(map).bindPopup(infoProzor);
                         }
                     });
                 }
-            } catch (e) { console.log("Greška pri dohvatu..."); }
+            } catch (e) { console.log("Greška pri dohvaćanju podataka..."); }
         }
 
-        setInterval(osvjezi, 3000);
+        setInterval(osvjezi, 4000);
         osvjezi();
     </script>
 </body>
