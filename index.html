@@ -1,40 +1,90 @@
-function updateData() {
-        // Idemo na naš unutarnji tunel koji smo napravili u app.py
-        fetch('/api/split-data')
-            .then(res => res.json())
-            .then(data => {
-                let vehicles = data.data || data;
-                let time = new Date().toLocaleTimeString('hr-HR', {hour: '2-digit', minute:'2-digit'});
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Split Live Turnusi</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        #map { height: 45%; width: 100%; border-bottom: 2px solid #333; }
+        #table-section { height: 55%; overflow-y: auto; padding: 20px; background: #f9f9f9; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #0055a4; color: white; position: sticky; top: 0; }
+        .tag { background: #e1f5fe; color: #01579b; border-radius: 4px; padding: 4px 8px; margin-right: 6px; font-size: 13px; font-weight: bold; border: 1px solid #b3e5fc; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="table-section">
+        <h2 id="status">Dnevnik kretanja</h2>
+        <table id="turnusTable">
+            <thead>
+                <tr>
+                    <th>Virtualni ID</th>
+                    <th>Linija</th>
+                    <th>Povijest Turnusa</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
-                vehicles.forEach(bus => {
-                    let id = bus.deviceId || bus.id;
-                    let linija = bus.lineCode || bus.linija || "???";
-                    let lat = bus.latitude || bus.lat;
-                    let lon = bus.longitude || bus.lon;
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([43.5147, 16.4435], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        var markers = {};
+        var busHistory = {};
 
-                    if (lat && lon && id) {
-                        // Ažuriranje markera na mapi
-                        if (markers[id]) {
-                            markers[id].setLatLng([lat, lon]).setTooltipContent("L" + linija);
-                        } else {
-                            markers[id] = L.marker([lat, lon]).addTo(map)
-                                .bindTooltip("L" + linija, {permanent: true, direction: 'top'});
+        function updateData() {
+            fetch('/api/split-data')
+                .then(res => res.json())
+                .then(data => {
+                    let vehicles = data.data || data;
+                    let time = new Date().toLocaleTimeString('hr-HR', {hour: '2-digit', minute:'2-digit'});
+                    vehicles.forEach(bus => {
+                        let id = bus.deviceId || bus.id;
+                        let linija = bus.lineCode || bus.linija || "???";
+                        let lat = bus.latitude || bus.lat;
+                        let lon = bus.longitude || bus.lon;
+                        if (lat && lon && id) {
+                            if (markers[id]) {
+                                markers[id].setLatLng([lat, lon]).setTooltipContent("L" + linija);
+                            } else {
+                                markers[id] = L.marker([lat, lon]).addTo(map).bindTooltip("L" + linija, {permanent: true, direction: 'top'});
+                            }
+                            if (!busHistory[id]) {
+                                busHistory[id] = {
+                                    vGbr: "BUS-" + (Object.keys(busHistory).length + 1),
+                                    zadnjaLinija: linija,
+                                    putanja: [time + " (L" + linija + ")"]
+                                };
+                            } else if (busHistory[id].zadnjaLinija !== linija) {
+                                busHistory[id].zadnjaLinija = linija;
+                                busHistory[id].putanja.push(time + " (L" + linija + ")");
+                            }
                         }
-
-                        // Logika za turnuse (Virtualni GBR)
-                        if (!busHistory[id]) {
-                            busHistory[id] = {
-                                vGbr: "BUS-" + (Object.keys(busHistory).length + 1),
-                                zadnjaLinija: linija,
-                                putanja: [time + " (L" + linija + ")"]
-                            };
-                        } else if (busHistory[id].zadnjaLinija !== linija) {
-                            busHistory[id].zadnjaLinija = linija;
-                            busHistory[id].putanja.push(time + " (L" + linija + ")");
-                        }
-                    }
+                    });
+                    iscrtajTablicu();
                 });
-                iscrtajTablicu();
-            })
-            .catch(err => console.error("Greška pri dohvatu:", err));
-    }
+        }
+
+        function iscrtajTablicu() {
+            let tbody = document.querySelector("#turnusTable tbody");
+            tbody.innerHTML = "";
+            Object.values(busHistory).sort((a,b) => b.putanja.length - a.putanja.length).forEach(t => {
+                let row = `<tr>
+                    <td><strong>${t.vGbr}</strong></td>
+                    <td style="color:#d32f2f; font-weight:bold">${t.zadnjaLinija}</td>
+                    <td>${t.putanja.map(p => `<span class="tag">${p}</span>`).join(" ➔ ")}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        setInterval(updateData, 15000);
+        updateData();
+    </script>
+</body>
+</html>
