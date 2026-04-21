@@ -15,11 +15,10 @@ def get_split_data():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
     try:
-        # Render server šalje upit, što Split ne blokira
         response = requests.get(url, headers=headers, timeout=10)
         return jsonify(response.json())
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except:
+        return jsonify({"error": "Failed"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
