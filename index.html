@@ -794,3 +794,40 @@
         }
 
         function showAll() {
+            Object.values(vehicles).forEach(v => v.marker.setOpacity(1));
+            document.getElementById('sideMenu').classList.remove('visible');
+        }
+
+        function showAllTrams() {
+            Object.values(vehicles).forEach(v => {
+                v.marker.setOpacity(v.data.routeType === 0 ? 1 : 0.15);
+            });
+            document.getElementById('sideMenu').classList.remove('visible');
+        }
+
+        function showAllBuses() {
+            Object.values(vehicles).forEach(v => {
+                v.marker.setOpacity(v.data.routeType === 3 ? 1 : 0.15);
+            });
+            document.getElementById('sideMenu').classList.remove('visible');
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        async function init() {
+            await loadRoutes();
+            await loadStops();
+            await loadVehicles();
+            
+            setupSearch();
+            
+            setInterval(loadVehicles, REFRESH_INTERVAL);
+            
+            console.log('🚋 ZETko aplikacija pokrenuta');
+        }
+
+        init();
+    </script>
+</body>
+</html>
