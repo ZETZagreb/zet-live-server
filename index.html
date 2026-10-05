@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>ZETko - Live Zagreb</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
+        #map { height: 100vh; width: 100%; background: #f0f0f0; }
+
+        /* GORNJA TRAKA */
+        .top-bar {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .top-bar > * { pointer-events: auto; }
+
+        .menu-btn {
+            background: #4c1d95;
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .menu-btn:hover { background: #5b21b6; }
+
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+        }
+        .search-box input {
+            border: none;
+            outline: none;
+            padding: 12px 8px;
+            font-size: 14px;
+            width: 100%;
+            background: transparent;
+        }
+
+        /* LIJEVI PANEL - DETALJI VOZILA */
+        .vehicle-panel {
+            position: absolute;
+            top: 70px;
+            left: 12px;
+            width: 340px;
+            max-width: calc(100% - 24px);
+            max-height: calc(100vh - 100px);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 999;
+            display: none;
+            overflow: hidden;
+            flex-direction: column;
+        }
+        .vehicle-panel.visible { display: flex; }
+
+        .vehicle-header {
+            padding: 16px;
+            background: linear-gradient(135deg, #4c1d95, #7c3aed);
+            color: white;
+            position: relative;
+        }
+        .vehicle-header .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .vehicle-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: 800;
+        }
+        .vehicle-line-badge {
+            background: white;
+            color: #4c1d95;
+            padding: 2px 12px;
+            border-radius: 8px;
+            font-size: 20px;
+        }
+        .vehicle-dest {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        .vehicle-meta {
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+        }
+        .vehicle-meta-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+        .vehicle-meta-label { color: #6b7280; }
+        .vehicle-meta-value { font-weight: 600; color: #1f2937; }
+
+        .vehicle-body {
+            overflow-y: auto;
+            flex: 1;
+            padding: 12px 16px;
+        }
+        .vehicle-body h4 {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .stop-list {
+            list-style: none;
+        }
+        .stop-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 13px;
+        }
+        .stop-item:last-child { border-bottom: none; }
+        .stop-time {
+            font-weight: 700;
+            color: #4c1d95;
+            min-width: 50px;
+            font-size: 14px;
+        }
+        .stop-name { flex: 1; color: #1f2937; }
+        .stop-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #d1d5db;
+            margin-right: 8px;
+        }
+        .stop-item.next .stop-dot { background: #4c1d95; }
+
+        /* IKONE NA KARTI */
+        .bus-icon {
+            background: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 13px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            border: 3px solid;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .bus-icon:hover { transform: scale(1.15); }
+        .bus-icon.tram {
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+        .bus-icon.bus {
+            border-color: #ea580c;
+            color: #ea580c;
+        }
+        .bus-icon.special {
+            border-color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .bus-arrow {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #dc2626;
+            text-shadow: 0 0 2px white;
+        }
+
+        /* STATS */
+        .stats {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(0,0,0,0.75);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        @media (max-width: 600px) {
+            .vehicle-panel { width: calc(100% - 24px); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- GORNJA TRAKA -->
+    <div class="top-bar">
+        <button class="menu-btn" onclick="toggleMenu()">☰</button>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Pretraži liniju ili vozilo...">
+        </div>
+    </div>
+
+    <!-- PANEL DETALJA VOZILA -->
+    <div class="vehicle-panel" id="vehiclePanel">
+        <div class="vehicle-header">
+            <button class="close-btn" onclick="closeVehiclePanel()">✕</button>
+            <div class="vehicle-line">
+                <span class="vehicle-line-badge" id="panelLine">102</span>
+                <span id="panelDest">→ Mihaljevac</span>
+            </div>
+            <div class="vehicle-dest" id="panelVehicleId">Vozilo: 3011</div>
+        </div>
+        <div class="vehicle-meta" id="panelMeta">
+            <!-- Meta podaci -->
+        </div>
+        <div class="vehicle-body">
+            <h4>📍 Stanice i vremena</h4>
+            <ul class="stop-list" id="panelStops">
+                <li class="stop-item"><span class="stop-time">--:--</span><span class="stop-name">Učitavanje...</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats" id="statsText">Učitavanje...</div>
+
+    <!-- MAPA -->
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // ============================================================
+        // KONFIGURACIJA
+        // ============================================================
+        const API_BASE = 'https://zet.prometko.cyou';
+        const REFRESH_INTERVAL = 10000; // 10 sekundi
+
+        // ============================================================
+        // MAPA
+        // ============================================================
+        const map = L.map('map', {
+            center: [45.815, 15.982],
+            zoom: 13,
+            zoomControl: false
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Zoom kontrole desno
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // ============================================================
+        // GLOBALNE VARIJABLE
+        // ============================================================
+        let routes = {};        // { routeId: { shortName, longName, type } }
+        let stops = [];         // Lista stanica
+        let vehicles = {};      // { vehicleId: { marker, data } }
+        let routeLines = {};    // { routeId: polyline }
+        let activeVehicleId = null;
+
+        // ============================================================
+        // IKONA ZA VOZILO
+        // ============================================================
+        function createVehicleIcon(line, type, bearing) {
+            const isTram = type === 0;
+            const className = isTram ? 'tram' : 'bus';
+            const special = (line === '307' || line === '308') ? 'special' : '';
+            
+            // Strelica za smjer
+            let arrowHtml = '';
+            if (bearing !== null && bearing !== undefined && bearing !== 0) {
+                arrowHtml = `<div class="bus-arrow" style="transform: translateX(-50%) rotate(${bearing}deg);">▲</div>`;
+            }
+
+            return L.divIcon({
+                html: `
+                    <div style="position: relative;">
+                        ${arrowHtml}
+                        <div class="bus-icon ${className} ${special}">${line}</div>
+                    </div>
+                `,
+                className: '',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+        }
+
+        // ============================================================
+        // DOHVATI RUTE (jednom)
+        // ============================================================
+        async function loadRoutes() {
+            try {
+                const resp = await fetch(`${API_BASE}/routes`);
+                const data = await resp.json();
+                data.forEach(r => {
+                    routes[r.routeId] = {
+                        shortName: r.routeShortName,
+                        longName: r.routeLongName,
+                        type: r.routeType
+                    };
+                });
+                console.log(`✅ Učitano ${Object.keys(routes).length} linija`);
+            } catch (e) {
+                console.error('❌ Greška pri učitavanju ruta:', e);
+            }
+        }
+
+        // ============================================================
+        // DOHVATI STANICE (jednom)
+        // ============================================================
+        async function loadStops() {
+            try {
+                const resp = await fetch(`${API_BASE}/stops`);
+                const data = await resp.json();
+                stops = data.features || [];
+                console.log(`✅ Učitano ${stops.length} stanica`);
+            } catch (e) {
+                console.error('❌ Greška pri učitavanju stanica:', e);
+            }
+        }
+
+        // ============================================================
+        // DOHVATI LIVE VOZILA
+        // ============================================================
+        async function loadVehicles() {
+            try {
+                const resp = await fetch(`${API_BASE}/vehicles/locations`);
+                const data = await resp.json();
+                
+                if (!data.features) return;
+
+                const currentIds = new Set();
+
+                data.features.forEach(f => {
+                    const [lng, lat] = f.geometry.coordinates;
+                    const p = f.properties;
+                    
+                    // Preskoči ako nema vehicleId ili je XXX
+                    if (!p.vehicleId || p.vehicleId === 'XXX') return;
+
+                    currentIds.add(p.vehicleId);
+
+                    const vehicleData = {
+                        id: p.vehicleId,
+                        lat, lng,
+                        line: p.routeShortName,
+                        dest: p.tripHeadsign,
+                        routeId: p.routeId,
+                        routeType: p.routeType,
+                        bearing: p.bearing,
+                        delay: p.delay,
+                        realTime: p.realTime,
+                        timestamp: p.timestamp,
+                        departureTime: p.departureTime
+                    };
+
+                    // Ako vozilo već postoji - samo update pozicije
+                    if (vehicles[p.vehicleId]) {
+                        vehicles[p.vehicleId].marker.setLatLng([lat, lng]);
+                        vehicles[p.vehicleId].marker.setIcon(
+                            createVehicleIcon(p.routeShortName, p.routeType, p.bearing)
+                        );
+                        vehicles[p.vehicleId].data = vehicleData;
+                    } else {
+                        // Novo vozilo - kreiraj marker
+                        const marker = L.marker([lat, lng], {
+                            icon: createVehicleIcon(p.routeShortName, p.routeType, p.bearing)
+                        }).addTo(map);
+
+                        marker.on('click', () => showVehicleDetails(vehicleData));
+
+                        vehicles[p.vehicleId] = {
+                            marker,
+                            data: vehicleData
+                        };
+                    }
+                });
+
+                // Ukloni vozila koja više nisu aktivna
+                for (const id in vehicles) {
+                    if (!currentIds.has(id)) {
+                        map.removeLayer(vehicles[id].marker);
+                        delete vehicles[id];
+                    }
+                }
+
+                // Update stats
+                document.getElementById('statsText').innerHTML = 
+                    `${new Date().toLocaleTimeString('hr-HR')} | ${Object.keys(vehicles).length} vozila`;
+
+                // Ako je panel otvoren, osvježi podatke
+                if (activeVehicleId && vehicles[activeVehicleId]) {
+                    updateVehiclePanel(vehicles[activeVehicleId].data);
+                }
+
+            } catch (e) {
+                console.error('❌ Greška pri učitavanju vozila:', e);
+                document.getElementById('statsText').innerHTML = 'Greška pri dohvatu';
+            }
+        }
+
+        // ============================================================
+        // PRIKAŽI DETALJE VOZILA
+        // ============================================================
+        function showVehicleDetails(v) {
+            activeVehicleId = v.id;
+            
+            // Prikaži panel
+            document.getElementById('vehiclePanel').classList.add('visible');
+            
+            // Popuni podatke
+            updateVehiclePanel(v);
+            
+            // Centriraj kartu na vozilo
+            map.setView([v.lat, v.lng], 15, { animate: true });
+        }
+
+        function updateVehiclePanel(v) {
+            if (!v) return;
+
+            // Header
+            document.getElementById('panelLine').textContent = v.line;
+            document.getElementById('panelDest').textContent = `→ ${v.dest}`;
+            document.getElementById('panelVehicleId').textContent = `Vozilo: ${v.id}`;
+
+            // Meta podaci
+            const route = routes[v.routeId] || {};
+            const typeText = v.routeType === 0 ? '🚋 Tramvaj' : '🚌 Autobus';
+            const delayText = v.delay === 0 ? 'Na vrijeme' : 
+                              v.delay > 0 ? `+${Math.round(v.delay/60)} min` : 
+                              `${Math.round(v.delay/60)} min`;
+            const delayColor = v.delay === 0 ? '#16a34a' : 
+                               Math.abs(v.delay) > 180 ? '#dc2626' : '#ea580c';
+
+            document.getElementById('panelMeta').innerHTML = `
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Tip:</span>
+                    <span class="vehicle-meta-value">${typeText}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Linija:</span>
+                    <span class="vehicle-meta-value">${route.longName || '-'}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Polazak:</span>
+                    <span class="vehicle-meta-value">${v.departureTime || '-'}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Kašnjenje:</span>
+                    <span class="vehicle-meta-value" style="color: ${delayColor};">${delayText}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Ažurirano:</span>
+                    <span class="vehicle-meta-value">${new Date(v.timestamp).toLocaleTimeString('hr-HR')}</span>
+                </div>
+            `;
+
+            // Generiraj listu stanica (simulirano - u stvarnosti bi trebalo dohvatiti trip details)
+            // Za sada prikaži poruku
+            document.getElementById('panelStops').innerHTML = `
+                <li class="stop-item">
+                    <span class="stop-dot"></span>
+                    <span class="stop-name">Trenutna pozicija</span>
+                    <span class="stop-time">sada</span>
+                </li>
+                <li class="stop-item">
+                    <span class="stop-dot"></span>
+                    <span class="stop-name">Odredište: ${v.dest}</span>
+                    <span class="stop-time">--:--</span>
+                </li>
+                <li style="padding: 12px; font-size: 12px; color: #9ca3af; text-align: center;">
+                    Detaljni popis stanica uskoro...
+                </li>
+            `;
+        }
+
+        function closeVehiclePanel() {
+            document.getElementById('vehiclePanel').classList.remove('visible');
+            activeVehicleId = null;
+        }
+
+        // ============================================================
+        // PRETRAGA
+        // ============================================================
+        function setupSearch() {
+            const input = document.getElementById('searchInput');
+            input.addEventListener('input', () => {
+                const query = input.value.toLowerCase().trim();
+                
+                Object.values(vehicles).forEach(v => {
+                    const match = !query || 
+                                  v.data.line.toLowerCase().includes(query) ||
+                                  v.data.id.toLowerCase().includes(query) ||
+                                  v.data.dest.toLowerCase().includes(query);
+                    
+                    v.marker.setOpacity(match ? 1 : 0.2);
+                });
+            });
+        }
+
+        // ============================================================
+        // MENI
+        // ============================================================
+        function toggleMenu() {
+            alert('Meni uskoro - opcije:\\n- Prikaz tramvaja\\n- Prikaz autobusa\\n- Povijest vozila\\n- Raspored po linijama');
+        }
+
+        // ============================================================
+        // INICIJALIZACIJA
+        // ============================================================
+        async function init() {
+            await loadRoutes();
+            await loadStops();
+            await loadVehicles();
+            
+            setupSearch();
+            
+            // Osvježavaj svakih 10 sekundi
+            setInterval(loadVehicles, REFRESH_INTERVAL);
+            
+            console.log('🚋 ZETko aplikacija pokrenuta');
+        }
+
+        init();
+    </script>
+</body>
+</html>
