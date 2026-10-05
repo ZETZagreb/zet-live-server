@@ -129,13 +129,13 @@
         }
         .vehicle-meta-row:last-child { border-bottom: none; }
         .vehicle-meta-label { color: #6b7280; }
-        .vehicle-meta-value { font-weight: 600; color: #1f2937; }
+        .vehicle-meta-value { font-weight: 600; color: #1f2937; text-align: right; }
 
         .stop-list { list-style: none; }
         .stop-item {
             display: flex; align-items: center;
             padding: 10px 8px; border-bottom: 1px solid #f3f4f6;
-            font-size: 13px; position: relative;
+            font-size: 13px;
         }
         .stop-item:last-child { border-bottom: none; }
         .stop-item.passed { opacity: 0.35; }
@@ -170,7 +170,6 @@
         .bus-icon:hover { transform: scale(1.15); }
         .bus-icon.tram { border-color: #2563eb; color: #2563eb; }
         .bus-icon.bus { border-color: #ea580c; color: #ea580c; }
-        .bus-icon.special { border-color: #dc2626; background: #fef2f2; }
         .bus-icon.highlighted {
             transform: scale(1.4);
             box-shadow: 0 0 0 4px rgba(76, 29, 149, 0.4);
@@ -193,7 +192,7 @@
 
         .side-menu {
             position: absolute; top: 70px; left: 12px;
-            width: 260px; background: white;
+            width: 280px; background: white;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             z-index: 1000; padding: 8px; display: none;
@@ -206,6 +205,7 @@
         }
         .menu-item:hover { background: #f3f4f6; }
         .menu-item .icon { font-size: 18px; }
+        .menu-divider { height: 1px; background: #e5e7eb; margin: 4px 0; }
 
         .route-loader {
             position: absolute; top: 50%; left: 50%;
@@ -217,9 +217,73 @@
         }
         .route-loader.visible { display: block; }
 
+        /* POVIJEST PANEL */
+        .history-panel {
+            position: absolute; top: 70px; left: 12px;
+            width: 420px; max-width: calc(100% - 24px);
+            max-height: calc(100vh - 100px);
+            background: white; border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 998; display: none;
+            overflow: hidden; flex-direction: column;
+        }
+        .history-panel.visible { display: flex; }
+        .history-header {
+            padding: 16px;
+            background: linear-gradient(135deg, #4c1d95, #7c3aed);
+            color: white;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .history-header h3 { font-size: 18px; }
+        .history-header .close-btn {
+            background: rgba(255,255,255,0.2);
+            border: none; color: white;
+            width: 32px; height: 32px; border-radius: 50%;
+            cursor: pointer; font-size: 16px;
+        }
+        .history-body { overflow-y: auto; padding: 16px; }
+        .history-item {
+            display: flex; align-items: center;
+            padding: 10px; border-bottom: 1px solid #f3f4f6;
+            font-size: 13px; gap: 10px;
+        }
+        .history-item:hover { background: #f9fafb; }
+        .history-badge {
+            background: #4c1d95; color: white;
+            padding: 3px 10px; border-radius: 6px;
+            font-weight: 700; font-size: 12px;
+            min-width: 45px; text-align: center;
+        }
+        .history-badge.bus { background: #ea580c; }
+        .history-info { flex: 1; }
+        .history-info strong { display: block; margin-bottom: 2px; }
+        .history-info small { color: #6b7280; font-size: 11px; }
+        .history-time {
+            font-size: 11px; color: #6b7280;
+            text-align: right; white-space: nowrap;
+        }
+        .history-stats {
+            background: #f9fafb; padding: 12px;
+            border-radius: 8px; margin-bottom: 12px;
+            display: flex; gap: 16px; font-size: 12px;
+        }
+        .history-stats strong { color: #4c1d95; font-size: 16px; }
+        .history-empty {
+            text-align: center; padding: 40px 20px;
+            color: #6b7280; font-size: 13px;
+        }
+        .history-filter {
+            padding: 10px; margin-bottom: 12px;
+            width: 100%; border: 1px solid #e5e7eb;
+            border-radius: 8px; font-size: 13px;
+            outline: none;
+        }
+        .history-filter:focus { border-color: #7c3aed; }
+
         @media (max-width: 600px) {
             .vehicle-panel { width: calc(100% - 24px); }
             .side-menu { width: calc(100% - 24px); }
+            .history-panel { width: calc(100% - 24px); }
         }
     </style>
 </head>
@@ -233,12 +297,17 @@
         </div>
     </div>
 
+    <!-- HAMBURGER MENI -->
     <div class="side-menu" id="sideMenu">
+        <div class="menu-item" onclick="showAll()"><span class="icon">🌐</span> Prikaži sva vozila</div>
         <div class="menu-item" onclick="showAllTrams()"><span class="icon">🚋</span> Prikaži samo tramvaje</div>
         <div class="menu-item" onclick="showAllBuses()"><span class="icon">🚌</span> Prikaži samo autobuse</div>
-        <div class="menu-item" onclick="showAll()"><span class="icon">🌐</span> Prikaži sva vozila</div>
+        <div class="menu-divider"></div>
+        <div class="menu-item" onclick="showHistory()"><span class="icon">📊</span> Povijest vozila</div>
+        <div class="menu-item" onclick="clearHistory()"><span class="icon">🗑️</span> Obriši povijest</div>
     </div>
 
+    <!-- PANEL VOZILA -->
     <div class="vehicle-panel" id="vehiclePanel">
         <div class="vehicle-header">
             <button class="close-btn" onclick="closeVehiclePanel()">✕</button>
@@ -252,7 +321,6 @@
         <div class="tabs">
             <div class="tab active" data-tab="stops" onclick="switchTab('stops')">📍 Stanice</div>
             <div class="tab" data-tab="details" onclick="switchTab('details')">📋 Detalji</div>
-            <div class="tab" data-tab="history" onclick="switchTab('history')">📊 Povijest</div>
         </div>
         
         <div class="vehicle-body">
@@ -264,25 +332,586 @@
             <div class="tab-content" id="tab-details">
                 <div id="panelMeta"></div>
             </div>
-            <div class="tab-content" id="tab-history">
-                <p style="color:#6b7280; font-size:13px; text-align:center; padding:20px;">
-                    Povijest vožnje ovog vozila bit će prikazana ovdje.
-                </p>
-            </div>
+        </div>
+    </div>
+
+    <!-- POVIJEST PANEL -->
+    <div class="history-panel" id="historyPanel">
+        <div class="history-header">
+            <h3>📊 Povijest vozila</h3>
+            <button class="close-btn" onclick="closeHistory()">✕</button>
+        </div>
+        <div class="history-body">
+            <div class="history-stats" id="historyStats"></div>
+            <input type="text" class="history-filter" id="historyFilter" placeholder="🔍 Filtriraj po GBR-u, liniji ili marki..." oninput="renderHistory()">
+            <div id="historyList"></div>
         </div>
     </div>
 
     <div class="route-loader" id="routeLoader">📍 Učitavanje rute...</div>
-
     <div class="stats" id="statsText">Učitavanje...</div>
-
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const API_BASE = 'https://zet.prometko.cyou';
         const REFRESH_INTERVAL = 10000;
+        const HISTORY_KEY = 'zetko_history_v1';
 
+        // ============================================================
+        // BAZA VOZILA - GBR, TABLICA, MARKA
+        // ============================================================
+        const vehicleDatabase = {
+            "1":   { reg: "ZG-7267-KR", model: "MAN Lion's Intercity R61 ÜL 360" },
+            "2":   { reg: "ZG-7268-KR", model: "MAN Lion's Intercity R61 ÜL 360" },
+            "3":   { reg: "ZG-7269-KR", model: "MAN Lion's Intercity R61 ÜL 360" },
+            "21":  { reg: "ZG-4536-KH", model: "Iveco Crossway Line 12m" },
+            "22":  { reg: "ZG-4537-KH", model: "Iveco Crossway Line 12m" },
+            "23":  { reg: "ZG-4538-KH", model: "Iveco Crossway Line 12m" },
+            "24":  { reg: "ZG-4824-KH", model: "Iveco Crossway Line 12m" },
+            "25":  { reg: "ZG-4825-KH", model: "Iveco Crossway Line 12m" },
+            "26":  { reg: "ZG-4826-KH", model: "Iveco Crossway Line 12m" },
+            "27":  { reg: "ZG-4827-KH", model: "Iveco Crossway Line 12m" },
+            "40":  { reg: "ZG-8815-GR", model: "Iveco Crossway LE City" },
+            "41":  { reg: "ZG-8816-GR", model: "Iveco Crossway LE City" },
+            "42":  { reg: "ZG-8817-GR", model: "Iveco Crossway LE City" },
+            "44":  { reg: "ZG-3539-IB", model: "Iveco Crossway LE City" },
+            "45":  { reg: "ZG-1859-HU", model: "Iveco Crossway LE City" },
+            "46":  { reg: "ZG-8821-GR", model: "Iveco Crossway LE City" },
+            "47":  { reg: "ZG-8822-GR", model: "Iveco Crossway LE City" },
+            "48":  { reg: "ZG-8823-GR", model: "Iveco Crossway LE City" },
+            "49":  { reg: "ZG-8824-GR", model: "Iveco Crossway LE City" },
+            "50":  { reg: "ZG-5498-HO", model: "Iveco Crossway LE City" },
+            "51":  { reg: "ZG-8826-GR", model: "Iveco Crossway LE City" },
+            "52":  { reg: "ZG-8827-GR", model: "Iveco Crossway LE City" },
+            "53":  { reg: "ZG-8828-GR", model: "Iveco Crossway LE City" },
+            "54":  { reg: "ZG-8829-GR", model: "Iveco Crossway LE City" },
+            "60":  { reg: "ZG-6712-GH", model: "Iveco Crossway 12m" },
+            "61":  { reg: "ZG-6713-GH", model: "Iveco Crossway 12m" },
+            "63":  { reg: "ZG-6457-DL", model: "MAN SL 283 Lion's Classic" },
+            "65":  { reg: "ZG-5651-DK", model: "MAN SL 283 Lion's Classic" },
+            "81":  { reg: "ZG-4681-DC", model: "MAN NL 313 Lion's City" },
+            "85":  { reg: "ZG-4149-JK", model: "MAN NL 313 Lion's City" },
+            "101": { reg: "ZG-8924-KK", model: "MAN Lion's City NL 323" },
+            "102": { reg: "ZG-8925-KK", model: "MAN Lion's City NL 323" },
+            "103": { reg: "ZG-2296-LG", model: "MAN Lion's City NL 363" },
+            "104": { reg: "ZG-8927-KK", model: "MAN Lion's City NL 323" },
+            "105": { reg: "ZG-8928-KK", model: "MAN Lion's City NL 323" },
+            "106": { reg: "ZG-8929-KK", model: "MAN Lion's City NL 323" },
+            "107": { reg: "ZG-8930-KK", model: "MAN Lion's City NL 323" },
+            "108": { reg: "ZG-8931-KK", model: "MAN Lion's City NL 323" },
+            "109": { reg: "ZG-8932-KK", model: "MAN Lion's City NL 323" },
+            "111": { reg: "ZG-3125-HU", model: "Iveco Crossway LE City" },
+            "112": { reg: "ZG-3121-HU", model: "Iveco Crossway LE City" },
+            "113": { reg: "ZG-3124-HU", model: "Iveco Crossway LE City" },
+            "114": { reg: "ZG-3119-HU", model: "Iveco Crossway LE City" },
+            "115": { reg: "ZG-3123-HU", model: "Iveco Crossway LE City" },
+            "116": { reg: "ZG-3122-HU", model: "Iveco Crossway LE City" },
+            "117": { reg: "ZG-3120-HU", model: "Iveco Crossway LE City" },
+            "155": { reg: "ZG-6915-AM", model: "MAN NG 313" },
+            "156": { reg: "ZG-7156-AZ", model: "MAN NG 313" },
+            "157": { reg: "ZG-7157-AZ", model: "MAN NG 313" },
+            "159": { reg: "ZG-7159-AZ", model: "MAN NG 313" },
+            "161": { reg: "ZG-7161-AZ", model: "MAN NG 313" },
+            "163": { reg: "ZG-7163-AZ", model: "MAN NG 313" },
+            "164": { reg: "ZG-6008-EP", model: "MAN NG 313" },
+            "166": { reg: "ZG-7166-AZ", model: "MAN NG 313" },
+            "175": { reg: "ZG-8619-KO", model: "Mercedes Benz Citaro G Facelift" },
+            "176": { reg: "ZG-3854-LH", model: "Mercedes Benz Citaro G Facelift" },
+            "178": { reg: "ZG-4661-KM", model: "Mercedes Benz Citaro G Facelift" },
+            "180": { reg: "ZG-8608-DU", model: "Mercedes Benz Citaro G Facelift" },
+            "181": { reg: "ZG-9157-KP", model: "Mercedes Benz Citaro G Facelift" },
+            "182": { reg: "ZG-2015-KU", model: "Mercedes Benz Citaro G Facelift" },
+            "183": { reg: "ZG-8632-DU", model: "Mercedes Benz Citaro G Facelift" },
+            "184": { reg: "ZG-4061-KP", model: "Mercedes Benz Citaro G Facelift" },
+            "185": { reg: "ZG-6394-JI", model: "Mercedes Benz Citaro G Facelift" },
+            "186": { reg: "ZG-6702-KN", model: "Mercedes Benz Citaro G Facelift" },
+            "187": { reg: "ZG-4920-KO", model: "Mercedes Benz Citaro G Facelift" },
+            "188": { reg: "ZG-2151-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "189": { reg: "ZG-7609-JZ", model: "Mercedes Benz Citaro G Facelift" },
+            "190": { reg: "ZG-9587-JL", model: "Mercedes Benz Citaro G Facelift" },
+            "191": { reg: "ZG-5559-KL", model: "Mercedes Benz Citaro G Facelift" },
+            "192": { reg: "ZG-2159-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "193": { reg: "ZG-2173-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "194": { reg: "ZG-4507-HU", model: "Mercedes Benz Citaro G Facelift" },
+            "195": { reg: "ZG-2175-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "197": { reg: "ZG-5861-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "198": { reg: "ZG-5863-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "199": { reg: "ZG-5864-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "200": { reg: "ZG-5865-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "202": { reg: "ZG-8429-JF", model: "Mercedes Benz Citaro G Facelift" },
+            "203": { reg: "ZG-5868-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "206": { reg: "ZG-5876-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "207": { reg: "ZG-1283-KA", model: "Mercedes Benz Citaro G Facelift" },
+            "208": { reg: "ZG-4754-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "209": { reg: "ZG-4756-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "210": { reg: "ZG-1486-FV", model: "Mercedes Benz Citaro G Facelift" },
+            "220": { reg: "ZG-4760-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "221": { reg: "ZG-4761-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "222": { reg: "ZG-4762-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "223": { reg: "ZG-4763-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "224": { reg: "ZG-2609-FI", model: "Mercedes Benz Citaro G Facelift" },
+            "225": { reg: "ZG-4767-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "226": { reg: "ZG-4768-DV", model: "Mercedes Benz Citaro G Facelift" },
+            "228": { reg: "ZG-3754-HK", model: "Mercedes Benz Citaro G Facelift" },
+            "232": { reg: "ZG-1220-HV", model: "MAN Lion's City NL 363" },
+            "233": { reg: "ZG-1224-HV", model: "MAN Lion's City NL 363" },
+            "234": { reg: "ZG-1225-HV", model: "MAN Lion's City NL 363" },
+            "235": { reg: "ZG-1227-HV", model: "MAN Lion's City NL 363" },
+            "236": { reg: "ZG-1223-HV", model: "MAN Lion's City NL 363" },
+            "237": { reg: "ZG-1228-HV", model: "MAN Lion's City NL 363" },
+            "238": { reg: "ZG-1226-HV", model: "MAN Lion's City NL 363" },
+            "239": { reg: "ZG-1229-HV", model: "MAN Lion's City NL 363" },
+            "240": { reg: "ZG-1250-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "241": { reg: "ZG-1251-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "242": { reg: "ZG-1252-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "243": { reg: "ZG-1253-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "244": { reg: "ZG-1254-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "245": { reg: "ZG-1255-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "246": { reg: "ZG-1256-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "247": { reg: "ZG-1257-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "248": { reg: "ZG-1258-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "249": { reg: "ZG-1259-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "250": { reg: "ZG-1260-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "251": { reg: "ZG-1261-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "252": { reg: "ZG-1262-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "253": { reg: "ZG-1263-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "254": { reg: "ZG-1264-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "255": { reg: "ZG-1265-IE", model: "Iveco Feniksbus FBI 83 M" },
+            "256": { reg: "ZG-9970-IF", model: "Iveco Urbanway 12m CNG" },
+            "257": { reg: "ZG-9971-IF", model: "Iveco Urbanway 12m CNG" },
+            "258": { reg: "ZG-9972-IF", model: "Iveco Urbanway 12m CNG" },
+            "259": { reg: "ZG-9973-IF", model: "Iveco Urbanway 12m CNG" },
+            "260": { reg: "ZG-9974-IF", model: "Iveco Urbanway 12m CNG" },
+            "261": { reg: "ZG-9975-IF", model: "Iveco Urbanway 12m CNG" },
+            "262": { reg: "ZG-9976-IF", model: "Iveco Urbanway 12m CNG" },
+            "263": { reg: "ZG-9977-IF", model: "Iveco Urbanway 12m CNG" },
+            "264": { reg: "ZG-9978-IF", model: "Iveco Urbanway 12m CNG" },
+            "265": { reg: "ZG-9979-IF", model: "Iveco Urbanway 12m CNG" },
+            "266": { reg: "ZG-9980-IF", model: "Iveco Urbanway 12m CNG" },
+            "267": { reg: "ZG-9981-IF", model: "Iveco Urbanway 12m CNG" },
+            "268": { reg: "ZG-9982-IF", model: "Iveco Urbanway 12m CNG" },
+            "269": { reg: "ZG-9983-IF", model: "Iveco Urbanway 12m CNG" },
+            "270": { reg: "ZG-9984-IF", model: "Iveco Urbanway 12m CNG" },
+            "271": { reg: "ZG-5606-IF", model: "Iveco Feniksbus FBI 83 M" },
+            "272": { reg: "ZG-5607-IF", model: "Iveco Feniksbus FBI 83 M" },
+            "273": { reg: "ZG-5608-IF", model: "Iveco Feniksbus FBI 83 M" },
+            "274": { reg: "ZG-5609-IF", model: "Iveco Feniksbus FBI 83 M" },
+            "275": { reg: "ZG-1384-IG", model: "Iveco Feniksbus FBI 83 M" },
+            "276": { reg: "ZG-1385-IG", model: "Iveco Feniksbus FBI 83 M" },
+            "277": { reg: "ZG-1387-IG", model: "Iveco Feniksbus FBI 83 M" },
+            "278": { reg: "ZG-1386-IG", model: "Iveco Feniksbus FBI 83 M" },
+            "280": { reg: "ZG-1620-FL", model: "Iveco Stratos LF 38 CNG" },
+            "281": { reg: "ZG-1617-FL", model: "Iveco Stratos LF 38 CNG" },
+            "282": { reg: "ZG-1619-FL", model: "Iveco Stratos LF 38 CNG" },
+            "284": { reg: "ZG-9023-FO", model: "Iveco Stratos LF 38 CNG" },
+            "285": { reg: "ZG-1622-FL", model: "Iveco Stratos LF 38 CNG" },
+            "286": { reg: "ZG-9022-FN", model: "Iveco Stratos LF 38 CNG" },
+            "288": { reg: "ZG-1631-FL", model: "Iveco Stratos LF 38 CNG" },
+            "289": { reg: "ZG-1632-FL", model: "Iveco Stratos LF 38 CNG" },
+            "291": { reg: "ZG-1626-FL", model: "Iveco Stratos LF 38 CNG" },
+            "292": { reg: "ZG-5193-FT", model: "Iveco Stratos LF 38 CNG" },
+            "293": { reg: "ZG-1627-FL", model: "Iveco Stratos LF 38 CNG" },
+            "294": { reg: "ZG-3109-JP", model: "Iveco Stratos LF 38 CNG" },
+            "301": { reg: "ZG-5104-HG", model: "MAN NL 313 Lion's City" },
+            "302": { reg: "ZG-2996-DV", model: "MAN NL 313 Lion's City" },
+            "303": { reg: "ZG-9134-KL", model: "MAN NL 313 Lion's City" },
+            "304": { reg: "ZG-2719-JP", model: "MAN NL 313 Lion's City" },
+            "305": { reg: "ZG-5056-EM", model: "MAN NL 313 Lion's City" },
+            "306": { reg: "ZG-2982-DV", model: "MAN NL 313 Lion's City" },
+            "307": { reg: "ZG-2983-DV", model: "MAN NL 313 Lion's City" },
+            "308": { reg: "ZG-2968-DV", model: "MAN NL 313 Lion's City" },
+            "310": { reg: "ZG-2971-DV", model: "MAN NL 313 Lion's City" },
+            "311": { reg: "ZG-2972-DV", model: "MAN NL 313 Lion's City" },
+            "312": { reg: "ZG-2973-DV", model: "MAN NL 313 Lion's City" },
+            "313": { reg: "ZG-2974-DV", model: "MAN NL 313 Lion's City" },
+            "314": { reg: "ZG-2160-DV", model: "MAN NL 313 Lion's City" },
+            "315": { reg: "ZG-1056-EL", model: "MAN NL 313 Lion's City" },
+            "316": { reg: "ZG-2164-DV", model: "MAN NL 313 Lion's City" },
+            "317": { reg: "ZG-8650-DU", model: "MAN NL 313 Lion's City" },
+            "318": { reg: "ZG-4796-DV", model: "MAN NL 313 Lion's City" },
+            "319": { reg: "ZG-4798-DV", model: "MAN NL 313 Lion's City" },
+            "320": { reg: "ZG-2162-DV", model: "MAN NL 313 Lion's City" },
+            "321": { reg: "ZG-4795-DV", model: "MAN NL 313 Lion's City" },
+            "322": { reg: "ZG-5504-DV", model: "MAN NL 313 Lion's City" },
+            "323": { reg: "ZG-5548-DV", model: "MAN NL 313 Lion's City" },
+            "324": { reg: "ZG-5549-DV", model: "MAN NL 313 Lion's City" },
+            "325": { reg: "ZG-8841-KK", model: "MAN NL 313 Lion's City" },
+            "326": { reg: "ZG-1783-DZ", model: "MAN NL 313 Lion's City" },
+            "327": { reg: "ZG-1784-DZ", model: "MAN NL 313 Lion's City" },
+            "328": { reg: "ZG-3189-KH", model: "MAN NL 313 Lion's City" },
+            "329": { reg: "ZG-1792-DZ", model: "MAN NL 313 Lion's City" },
+            "330": { reg: "ZG-1793-DZ", model: "MAN NL 313 Lion's City" },
+            "332": { reg: "ZG-5457-DZ", model: "MAN NL 313 Lion's City" },
+            "334": { reg: "ZG-4351-EC", model: "MAN NL 313 Lion's City" },
+            "336": { reg: "ZG-5492-DZ", model: "MAN NL 313 Lion's City" },
+            "337": { reg: "ZG-5493-DZ", model: "MAN NL 313 Lion's City" },
+            "338": { reg: "ZG-6594-DZ", model: "MAN NL 313 Lion's City" },
+            "339": { reg: "ZG-7449-HM", model: "MAN NL 313 Lion's City" },
+            "340": { reg: "ZG-5896-FG", model: "MAN NL 313 Lion's City" },
+            "341": { reg: "ZG-3852-JT", model: "MAN NL 313 Lion's City" },
+            "342": { reg: "ZG-2568-EA", model: "MAN NL 313 Lion's City" },
+            "343": { reg: "ZG-9418-JL", model: "MAN NL 313 Lion's City" },
+            "344": { reg: "ZG-9275-JJ", model: "MAN NL 313 Lion's City" },
+            "345": { reg: "ZG-2573-EA", model: "MAN NL 313 Lion's City" },
+            "346": { reg: "ZG-3941-JF", model: "MAN NL 313 Lion's City" },
+            "347": { reg: "ZG-7385-KF", model: "MAN NL 313 Lion's City" },
+            "352": { reg: "ZG-5182-HS", model: "MAN Lion's City NL 363" },
+            "353": { reg: "ZG-5183-HS", model: "MAN Lion's City NL 363" },
+            "354": { reg: "ZG-5184-HS", model: "MAN Lion's City NL 363" },
+            "355": { reg: "ZG-5185-HS", model: "MAN Lion's City NL 363" },
+            "356": { reg: "ZG-5186-HS", model: "MAN Lion's City NL 363" },
+            "357": { reg: "ZG-5187-HS", model: "MAN Lion's City NL 363" },
+            "358": { reg: "ZG-5188-HS", model: "MAN Lion's City NL 363" },
+            "359": { reg: "ZG-7911-IV", model: "MAN NL 360 Lion's City 12C" },
+            "360": { reg: "ZG-7910-IV", model: "MAN NL 360 Lion's City 12C" },
+            "361": { reg: "ZG-7912-IV", model: "MAN NL 360 Lion's City 12C" },
+            "362": { reg: "ZG-7913-IV", model: "MAN NL 360 Lion's City 12C" },
+            "363": { reg: "ZG-7914-IV", model: "MAN NL 360 Lion's City 12C" },
+            "364": { reg: "ZG-7915-IV", model: "MAN NL 360 Lion's City 12C" },
+            "365": { reg: "ZG-7916-IV", model: "MAN NL 360 Lion's City 12C" },
+            "366": { reg: "ZG-7917-IV", model: "MAN NL 360 Lion's City 12C" },
+            "367": { reg: "ZG-7918-IV", model: "MAN NL 360 Lion's City 12C" },
+            "368": { reg: "ZG-7919-IV", model: "MAN NL 360 Lion's City 12C" },
+            "369": { reg: "ZG-9471-IV", model: "MAN NL 360 Lion's City 12C" },
+            "370": { reg: "ZG-9472-IV", model: "MAN NL 360 Lion's City 12C" },
+            "371": { reg: "ZG-9473-IV", model: "MAN NL 360 Lion's City 12C" },
+            "372": { reg: "ZG-9474-IV", model: "MAN NL 360 Lion's City 12C" },
+            "373": { reg: "ZG-9475-IV", model: "MAN NL 360 Lion's City 12C" },
+            "374": { reg: "ZG-9476-IV", model: "MAN NL 360 Lion's City 12C" },
+            "375": { reg: "ZG-9477-IV", model: "MAN NL 360 Lion's City 12C" },
+            "376": { reg: "ZG-9478-IV", model: "MAN NL 360 Lion's City 12C" },
+            "377": { reg: "ZG-9479-IV", model: "MAN NL 360 Lion's City 12C" },
+            "378": { reg: "ZG-9480-IV", model: "MAN NL 360 Lion's City 12C" },
+            "379": { reg: "ZG-2318-LF", model: "MAN NL 323 Lion's City" },
+            "380": { reg: "ZG-3401-KL", model: "MAN NL 323 Lion's City" },
+            "381": { reg: "ZG-3402-KL", model: "MAN NL 323 Lion's City" },
+            "382": { reg: "ZG-3403-KL", model: "MAN NL 323 Lion's City" },
+            "383": { reg: "ZG-3404-KL", model: "MAN NL 323 Lion's City" },
+            "384": { reg: "ZG-3405-KL", model: "MAN NL 323 Lion's City" },
+            "385": { reg: "ZG-3406-KL", model: "MAN NL 323 Lion's City" },
+            "386": { reg: "ZG-3407-KL", model: "MAN NL 323 Lion's City" },
+            "387": { reg: "ZG-3419-KL", model: "MAN NL 323 Lion's City" },
+            "388": { reg: "ZG-3409-KL", model: "MAN NL 323 Lion's City" },
+            "389": { reg: "ZG-6359-LE", model: "MAN NL 283 Lion's City" },
+            "390": { reg: "ZG-5700-HS", model: "Iveco Crossway LE City" },
+            "391": { reg: "ZG-5701-HS", model: "Iveco Crossway LE City" },
+            "392": { reg: "ZG-5702-HS", model: "Iveco Crossway LE City" },
+            "393": { reg: "ZG-5703-HS", model: "Iveco Crossway LE City" },
+            "394": { reg: "ZG-5704-HS", model: "Iveco Crossway LE City" },
+            "395": { reg: "ZG-5705-HS", model: "Iveco Crossway LE City" },
+            "396": { reg: "ZG-5706-HS", model: "Iveco Crossway LE City" },
+            "401": { reg: "ZG-5615-GI", model: "Iveco Urbanway 12m" },
+            "402": { reg: "ZG-5616-GI", model: "Iveco Urbanway 12m" },
+            "403": { reg: "ZG-5617-GI", model: "Iveco Urbanway 12m" },
+            "404": { reg: "ZG-5618-GI", model: "Iveco Urbanway 12m" },
+            "405": { reg: "ZG-5619-GI", model: "Iveco Urbanway 12m" },
+            "406": { reg: "ZG-8800-GR", model: "Iveco Crossway LE City" },
+            "407": { reg: "ZG-8801-GR", model: "Iveco Crossway LE City" },
+            "408": { reg: "ZG-8802-GR", model: "Iveco Crossway LE City" },
+            "409": { reg: "ZG-8803-GR", model: "Iveco Crossway LE City" },
+            "410": { reg: "ZG-8804-GR", model: "Iveco Crossway LE City" },
+            "411": { reg: "ZG-8805-GR", model: "Iveco Crossway LE City" },
+            "412": { reg: "ZG-8806-GR", model: "Iveco Crossway LE City" },
+            "413": { reg: "ZG-8807-GR", model: "Iveco Crossway LE City" },
+            "414": { reg: "ZG-8808-GR", model: "Iveco Crossway LE City" },
+            "415": { reg: "ZG-8809-GR", model: "Iveco Crossway LE City" },
+            "416": { reg: "ZG-8810-GR", model: "Iveco Crossway LE City" },
+            "417": { reg: "ZG-8811-GR", model: "Iveco Crossway LE City" },
+            "418": { reg: "ZG-8812-GR", model: "Iveco Crossway LE City" },
+            "419": { reg: "ZG-8813-GR", model: "Iveco Crossway LE City" },
+            "420": { reg: "ZG-8814-GR", model: "Iveco Crossway LE City" },
+            "421": { reg: "ZG-9301-KL", model: "Mercedes Benz Citaro C2" },
+            "422": { reg: "ZG-9302-KL", model: "Mercedes Benz Citaro C2" },
+            "423": { reg: "ZG-9303-KL", model: "Mercedes Benz Citaro C2" },
+            "424": { reg: "ZG-9304-KL", model: "Mercedes Benz Citaro C2" },
+            "425": { reg: "ZG-9305-KL", model: "Mercedes Benz Citaro C2" },
+            "426": { reg: "ZG-9306-KL", model: "Mercedes Benz Citaro C2" },
+            "427": { reg: "ZG-9307-KL", model: "Mercedes Benz Citaro C2" },
+            "428": { reg: "ZG-9308-KL", model: "Mercedes Benz Citaro C2" },
+            "429": { reg: "ZG-9309-KL", model: "Mercedes Benz Citaro C2" },
+            "430": { reg: "ZG-7309-LG", model: "Mercedes Benz Citaro C2" },
+            "431": { reg: "ZG-9311-KL", model: "Mercedes Benz Citaro C2" },
+            "432": { reg: "ZG-9312-KL", model: "Mercedes Benz Citaro C2" },
+            "433": { reg: "ZG-9313-KL", model: "Mercedes Benz Citaro C2" },
+            "434": { reg: "ZG-9314-KL", model: "Mercedes Benz Citaro C2" },
+            "435": { reg: "ZG-9315-KL", model: "Mercedes Benz Citaro C2" },
+            "436": { reg: "ZG-1936-KM", model: "Mercedes Benz Citaro C2" },
+            "437": { reg: "ZG-1937-KM", model: "Mercedes Benz Citaro C2" },
+            "438": { reg: "ZG-1938-KM", model: "Mercedes Benz Citaro C2" },
+            "439": { reg: "ZG-1939-KM", model: "Mercedes Benz Citaro C2" },
+            "440": { reg: "ZG-1940-KM", model: "Mercedes Benz Citaro C2" },
+            "441": { reg: "ZG-1941-KM", model: "Mercedes Benz Citaro C2" },
+            "442": { reg: "ZG-1942-KM", model: "Mercedes Benz Citaro C2" },
+            "443": { reg: "ZG-1943-KM", model: "Mercedes Benz Citaro C2" },
+            "444": { reg: "ZG-1944-KM", model: "Mercedes Benz Citaro C2" },
+            "445": { reg: "ZG-1945-KM", model: "Mercedes Benz Citaro C2" },
+            "446": { reg: "ZG-1946-KM", model: "Mercedes Benz Citaro C2" },
+            "447": { reg: "ZG-1947-KM", model: "Mercedes Benz Citaro C2" },
+            "448": { reg: "ZG-1948-KM", model: "Mercedes Benz Citaro C2" },
+            "449": { reg: "ZG-1949-KM", model: "Mercedes Benz Citaro C2" },
+            "450": { reg: "ZG-1950-KM", model: "Mercedes Benz Citaro C2" },
+            "451": { reg: "ZG-5896-DV", model: "MAN NL 313 Lion's City" },
+            "452": { reg: "ZG-5851-DV", model: "MAN NL 313 Lion's City" },
+            "453": { reg: "ZG-5870-DV", model: "MAN NL 313 Lion's City" },
+            "454": { reg: "ZG-8256-FP", model: "MAN NL 313 Lion's City" },
+            "455": { reg: "ZG-5854-DV", model: "MAN NL 313 Lion's City" },
+            "456": { reg: "ZG-5852-DV", model: "MAN NL 313 Lion's City" },
+            "457": { reg: "ZG-5895-DV", model: "MAN NL 313 Lion's City" },
+            "458": { reg: "ZG-5897-DV", model: "MAN NL 313 Lion's City" },
+            "459": { reg: "ZG-3071-FD", model: "MAN NL 313 Lion's City" },
+            "460": { reg: "ZG-5856-DV", model: "MAN NL 313 Lion's City" },
+            "462": { reg: "ZG-6281-FO", model: "MAN NL 313 Lion's City" },
+            "463": { reg: "ZG-5543-DV", model: "MAN NL 313 Lion's City" },
+            "464": { reg: "ZG-1593-JT", model: "MAN NL 313 Lion's City" },
+            "465": { reg: "ZG-5539-DV", model: "MAN NL 313 Lion's City" },
+            "466": { reg: "ZG-4799-DV", model: "MAN NL 313 Lion's City" },
+            "467": { reg: "ZG-2161-DV", model: "MAN NL 313 Lion's City" },
+            "468": { reg: "ZG-4579-GU", model: "MAN NL 313 Lion's City" },
+            "469": { reg: "ZG-3150-GF", model: "MAN NL 313 Lion's City" },
+            "470": { reg: "ZG-1753-DZ", model: "MAN NL 313 Lion's City" },
+            "471": { reg: "ZG-3219-ER", model: "MAN NL 313 Lion's City" },
+            "472": { reg: "ZG-1757-DZ", model: "MAN NL 313 Lion's City" },
+            "473": { reg: "ZG-1758-DZ", model: "MAN NL 313 Lion's City" },
+            "474": { reg: "ZG-1755-DZ", model: "MAN NL 313 Lion's City" },
+            "475": { reg: "ZG-1761-DZ", model: "MAN NL 313 Lion's City" },
+            "476": { reg: "ZG-1756-DZ", model: "MAN NL 313 Lion's City" },
+            "477": { reg: "ZG-4782-DV", model: "MAN NL 313 Lion's City" },
+            "478": { reg: "ZG-2549-JV", model: "MAN NL 323 Lion's City" },
+            "479": { reg: "ZG-6039-KA", model: "MAN NL 323 Lion's City" },
+            "480": { reg: "ZG-6040-KA", model: "MAN NL 323 Lion's City" },
+            "481": { reg: "ZG-6041-KA", model: "MAN NL 323 Lion's City" },
+            "482": { reg: "ZG-6042-KA", model: "MAN NL 323 Lion's City" },
+            "483": { reg: "ZG-6043-KA", model: "MAN NL 323 Lion's City" },
+            "484": { reg: "ZG-6044-KA", model: "MAN NL 323 Lion's City" },
+            "485": { reg: "ZG-6142-KC", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "486": { reg: "ZG-6143-KC", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "487": { reg: "ZG-6144-KC", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "488": { reg: "ZG-6145-KC", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "489": { reg: "ZG-6146-KC", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "490": { reg: "ZG-5691-KB", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "491": { reg: "ZG-5692-KB", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "492": { reg: "ZG-7681-KB", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "493": { reg: "ZG-7682-KB", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "494": { reg: "ZG-7683-KB", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "495": { reg: "ZG-7684-KB", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "496": { reg: "ZG-7685-KB", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "497": { reg: "ZG-7686-KB", model: "MAN NL 280 Lion's City 12C EfficientHybrid" },
+            "501": { reg: "ZG-5640-KB", model: "Mercedes Benz Citaro C2 G" },
+            "502": { reg: "ZG-5641-KB", model: "Mercedes Benz Citaro C2 G" },
+            "503": { reg: "ZG-5642-KB", model: "Mercedes Benz Citaro C2 G" },
+            "504": { reg: "ZG-5643-KB", model: "Mercedes Benz Citaro C2 G" },
+            "505": { reg: "ZG-5644-KB", model: "Mercedes Benz Citaro C2 G" },
+            "506": { reg: "ZG-5645-KB", model: "Mercedes Benz Citaro C2 G" },
+            "507": { reg: "ZG-8045-KC", model: "Mercedes Benz Citaro C2 G" },
+            "508": { reg: "ZG-8046-KC", model: "Mercedes Benz Citaro C2 G" },
+            "509": { reg: "ZG-2335-LG", model: "Mercedes Benz Citaro C2 G" },
+            "510": { reg: "ZG-8051-KC", model: "Mercedes Benz Citaro C2 G" },
+            "511": { reg: "ZG-8052-KC", model: "Mercedes Benz Citaro C2 G" },
+            "512": { reg: "ZG-8053-KC", model: "Mercedes Benz Citaro C2 G" },
+            "513": { reg: "ZG-8054-KC", model: "Mercedes Benz Citaro C2 G" },
+            "514": { reg: "ZG-8062-KC", model: "Mercedes Benz Citaro C2 G" },
+            "515": { reg: "ZG-8063-KC", model: "Mercedes Benz Citaro C2 G" },
+            "516": { reg: "ZG-8064-KC", model: "Mercedes Benz Citaro C2 G" },
+            "517": { reg: "ZG-4436-KG", model: "Mercedes Benz Citaro C2 G" },
+            "518": { reg: "ZG-4437-KG", model: "Mercedes Benz Citaro C2 G" },
+            "519": { reg: "ZG-4438-KG", model: "Mercedes Benz Citaro C2 G" },
+            "520": { reg: "ZG-4439-KG", model: "Mercedes Benz Citaro C2 G" },
+            "521": { reg: "ZG-7205-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "522": { reg: "ZG-7206-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "523": { reg: "ZG-7207-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "524": { reg: "ZG-7208-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "525": { reg: "ZG-7209-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "526": { reg: "ZG-7210-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "527": { reg: "ZG-7211-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "528": { reg: "ZG-7212-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "529": { reg: "ZG-7213-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "530": { reg: "ZG-7214-KJ", model: "Mercedes Benz Citaro C2 G" },
+            "542": { reg: "ZG-1857-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "543": { reg: "ZG-6819-HO", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "544": { reg: "ZG-1863-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "545": { reg: "ZG-1862-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "546": { reg: "ZG-7492-FE", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "548": { reg: "ZG-8619-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "549": { reg: "ZG-8623-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "550": { reg: "ZG-8618-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "551": { reg: "ZG-2157-DV", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "552": { reg: "ZG-8394-JF", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "553": { reg: "ZG-1607-JT", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "554": { reg: "ZG-1856-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "555": { reg: "ZG-1853-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "557": { reg: "ZG-1859-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "558": { reg: "ZG-1852-DU", model: "Mercedes Benz O530G II Citaro G Facelift" },
+            "560": { reg: "ZG-2160-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "561": { reg: "ZG-2161-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "562": { reg: "ZG-2162-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "563": { reg: "ZG-2163-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "564": { reg: "ZG-2164-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "565": { reg: "ZG-2165-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "566": { reg: "ZG-2166-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "567": { reg: "ZG-2167-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "568": { reg: "ZG-2317-LF", model: "Mercedes Benz Citaro C2 G" },
+            "569": { reg: "ZG-2169-IZ", model: "Mercedes Benz Citaro C2 G" },
+            "570": { reg: "ZG-8020-JA", model: "Mercedes Benz Citaro C2 G" },
+            "571": { reg: "ZG-8021-JA", model: "Mercedes Benz Citaro C2 G" },
+            "572": { reg: "ZG-8022-JA", model: "Mercedes Benz Citaro C2 G" },
+            "573": { reg: "ZG-8023-JA", model: "Mercedes Benz Citaro C2 G" },
+            "574": { reg: "ZG-8024-JA", model: "Mercedes Benz Citaro C2 G" },
+            "575": { reg: "ZG-8025-JA", model: "Mercedes Benz Citaro C2 G" },
+            "576": { reg: "ZG-8026-JA", model: "Mercedes Benz Citaro C2 G" },
+            "577": { reg: "ZG-8027-JA", model: "Mercedes Benz Citaro C2 G" },
+            "578": { reg: "ZG-8028-JA", model: "Mercedes Benz Citaro C2 G" },
+            "579": { reg: "ZG-8029-JA", model: "Mercedes Benz Citaro C2 G" },
+            "580": { reg: "ZG-1190-GG", model: "MAN NG 363 Lion's City G" },
+            "581": { reg: "ZG-1191-GG", model: "MAN NG 363 Lion's City G" },
+            "582": { reg: "ZG-1192-GG", model: "MAN NG 363 Lion's City G" },
+            "583": { reg: "ZG-1193-GG", model: "MAN NG 363 Lion's City G" },
+            "584": { reg: "ZG-1194-GG", model: "MAN NG 363 Lion's City G" },
+            "585": { reg: "ZG-1195-GG", model: "MAN NG 363 Lion's City G" },
+            "586": { reg: "ZG-1196-GG", model: "MAN NG 363 Lion's City G" },
+            "587": { reg: "ZG-1197-GG", model: "MAN NG 363 Lion's City G" },
+            "588": { reg: "ZG-1198-GG", model: "MAN NG 363 Lion's City G" },
+            "589": { reg: "ZG-1199-GG", model: "MAN NG 363 Lion's City G" },
+            "590": { reg: "ZG-8090-KA", model: "Mercedes Benz Citaro C2 G" },
+            "591": { reg: "ZG-8091-KA", model: "Mercedes Benz Citaro C2 G" },
+            "592": { reg: "ZG-8092-KA", model: "Mercedes Benz Citaro C2 G" },
+            "593": { reg: "ZG-8093-KA", model: "Mercedes Benz Citaro C2 G" },
+            "594": { reg: "ZG-8094-KA", model: "Mercedes Benz Citaro C2 G" },
+            "595": { reg: "ZG-8095-KA", model: "Mercedes Benz Citaro C2 G" },
+            "596": { reg: "ZG-8096-KA", model: "Mercedes Benz Citaro C2 G" },
+            "597": { reg: "ZG-8097-KA", model: "Mercedes Benz Citaro C2 G" },
+            "598": { reg: "ZG-8098-KA", model: "Mercedes Benz Citaro C2 G" },
+            "600": { reg: "ZG-8400-LC", model: "Mercedes Benz Citaro C2 G" },
+            "601": { reg: "ZG-8401-LC", model: "Mercedes Benz Citaro C2 G" },
+            "602": { reg: "ZG-8402-LC", model: "Mercedes Benz Citaro C2 G" },
+            "603": { reg: "ZG-8403-LC", model: "Mercedes Benz Citaro C2 G" },
+            "604": { reg: "ZG-8404-LC", model: "Mercedes Benz Citaro C2 G" },
+            "605": { reg: "ZG-8405-LC", model: "Mercedes Benz Citaro C2 G" },
+            "606": { reg: "ZG-8406-LC", model: "Mercedes Benz Citaro C2 G" },
+            "607": { reg: "ZG-8407-LC", model: "Mercedes Benz Citaro C2 G" },
+            "614": { reg: "ZG-2435-DJ", model: "MAN SÜ 313 Lion's Classic" },
+            "617": { reg: "ZG-3745-FI", model: "MAN SÜ 313 Lion's Classic" },
+            "619": { reg: "ZG-2430-DJ", model: "MAN SÜ 313 Lion's Classic" },
+            "620": { reg: "ZG-2433-DJ", model: "MAN SÜ 313 Lion's Classic" },
+            "621": { reg: "ZG-5655-DK", model: "MAN SL 283 Lion's Classic" },
+            "622": { reg: "ZG-5660-DK", model: "MAN SL 283 Lion's Classic" },
+            "623": { reg: "ZG-5656-DK", model: "MAN SL 283 Lion's Classic" },
+            "625": { reg: "ZG-5654-DK", model: "MAN SL 283 Lion's Classic" },
+            "626": { reg: "ZG-5657-DK", model: "MAN SL 283 Lion's Classic" },
+            "627": { reg: "ZG-5658-DK", model: "MAN SL 283 Lion's Classic" },
+            "628": { reg: "ZG-5652-DK", model: "MAN SL 283 Lion's Classic" },
+            "629": { reg: "ZG-6461-DL", model: "MAN SL 283 Lion's Classic" },
+            "641": { reg: "ZG-7590-GE", model: "MAN ÜL 314 Lion's Regio" },
+            "642": { reg: "ZG-6456-DL", model: "MAN ÜL 314 Lion's Regio" },
+            "643": { reg: "ZG-6714-GH", model: "Iveco Crossway 12m" },
+            "644": { reg: "ZG-6715-GH", model: "Iveco Crossway 12m" },
+            "646": { reg: "ZG-5458-DU", model: "Iveco Daily 3.0HPT" },
+            "647": { reg: "ZG-7598-DU", model: "Iveco Daily 3.0HPT" },
+            "691": { reg: "ZG-8227-DZ", model: "Iveco Irisbus Citelis 12M CNG" },
+            "701": { reg: "ZG-6781-HE", model: "Ayats Kronos Cabrio" },
+            "702": { reg: "ZG-6782-HE", model: "Ayats Kronos Cabrio" },
+            "703": { reg: "ZG-6783-HE", model: "Ayats Kronos Cabrio" },
+            "704": { reg: "ZG-6784-HE", model: "Ayats Kronos Cabrio" },
+            "745": { reg: "ZG-3925-DZ", model: "Iveco Irisbus Citelis 18M CNG" },
+            "754": { reg: "ZG-9608-DZ", model: "Iveco Irisbus Citelis 18M CNG" },
+            "791": { reg: "ZG-5470-EK", model: "Iveco Irisbus Citelis 18M CNG" },
+            "793": { reg: "ZG-5507-FJ", model: "Iveco Irisbus Citelis 12M CNG" },
+            "801": { reg: "ZG-8010-IV", model: "Iveco Crossway LE City" },
+            "802": { reg: "ZG-8011-IV", model: "Iveco Crossway LE City" },
+            "803": { reg: "ZG-8012-IV", model: "Iveco Crossway LE City" },
+            "804": { reg: "ZG-8013-IV", model: "Iveco Crossway LE City" },
+            "805": { reg: "ZG-8014-IV", model: "Iveco Crossway LE City" },
+            "806": { reg: "ZG-8015-IV", model: "Iveco Crossway LE City" },
+            "807": { reg: "ZG-8016-IV", model: "Iveco Crossway LE City" },
+            "808": { reg: "ZG-8017-IV", model: "Iveco Crossway LE City" },
+            "809": { reg: "ZG-8018-IV", model: "Iveco Crossway LE City" },
+            "810": { reg: "ZG-8019-IV", model: "Iveco Crossway LE City" },
+            "811": { reg: "ZG-8020-IV", model: "Iveco Crossway LE City" },
+            "812": { reg: "ZG-8021-IV", model: "Iveco Crossway LE City" },
+            "813": { reg: "ZG-5623-LD", model: "Iveco Crossway LE City" },
+            "814": { reg: "ZG-8023-IV", model: "Iveco Crossway LE City" },
+            "815": { reg: "ZG-8024-IV", model: "Iveco Crossway LE City" },
+            "816": { reg: "ZG-9481-IV", model: "Iveco Crossway LE City" },
+            "817": { reg: "ZG-9482-IV", model: "Iveco Crossway LE City" },
+            "818": { reg: "ZG-9483-IV", model: "Iveco Crossway LE City" },
+            "819": { reg: "ZG-9484-IV", model: "Iveco Crossway LE City" },
+            "820": { reg: "ZG-9485-IV", model: "Iveco Crossway LE City" },
+            "821": { reg: "ZG-9486-IV", model: "Iveco Crossway LE City" },
+            "822": { reg: "ZG-9487-IV", model: "Iveco Crossway LE City" },
+            "823": { reg: "ZG-9488-IV", model: "Iveco Crossway LE City" },
+            "824": { reg: "ZG-9489-IV", model: "Iveco Crossway LE City" },
+            "825": { reg: "ZG-9490-IV", model: "Iveco Crossway LE City" },
+            "871": { reg: "ZG-3824-KI", model: "Iveco Crossway LE City ELEC" },
+            "872": { reg: "ZG-9036-KL", model: "Iveco Crossway LE City ELEC" },
+            "3001": { reg: "ZG-2069-KO", model: "MAN Lion's City 12E NL326" },
+            "3002": { reg: "ZG-2089-KO", model: "MAN Lion's City 12E NL326" },
+            "3003": { reg: "ZG-4275-LB", model: "MAN Lion's City 12E NL326" },
+            "3004": { reg: "ZG-4276-LB", model: "MAN Lion's City 12E NL326" },
+            "3005": { reg: "ZG-4277-LB", model: "MAN Lion's City 12E NL326" },
+            "3006": { reg: "ZG-4278-LB", model: "MAN Lion's City 12E NL326" },
+            "3007": { reg: "ZG-4279-LB", model: "MAN Lion's City 12E NL326" },
+            "3008": { reg: "ZG-4280-LB", model: "MAN Lion's City 12E NL326" },
+            "3009": { reg: "ZG-4281-LB", model: "MAN Lion's City 12E NL326" },
+            "3010": { reg: "ZG-4282-LB", model: "MAN Lion's City 12E NL326" },
+            "3011": { reg: "ZG-4283-LB", model: "MAN Lion's City 12E NL326" },
+            "3012": { reg: "ZG-4284-LB", model: "MAN Lion's City 12E NL326" },
+            "3013": { reg: "ZG-4285-LB", model: "MAN Lion's City 12E NL326" },
+            "3014": { reg: "ZG-4286-LB", model: "MAN Lion's City 12E NL326" },
+            "3015": { reg: "ZG-4287-LB", model: "MAN Lion's City 12E NL326" },
+            "3016": { reg: "ZG-4288-LB", model: "MAN Lion's City 12E NL326" },
+            "3017": { reg: "ZG-4289-LB", model: "MAN Lion's City 12E NL326" },
+            "3018": { reg: "ZG-4290-LB", model: "MAN Lion's City 12E NL326" },
+            "3019": { reg: "ZG-4291-LB", model: "MAN Lion's City 12E NL326" },
+            "3020": { reg: "ZG-4292-LB", model: "MAN Lion's City 12E NL326" },
+            "3021": { reg: "ZG-4293-LB", model: "MAN Lion's City 12E NL326" },
+            "3022": { reg: "ZG-4294-LB", model: "MAN Lion's City 12E NL326" },
+            "3023": { reg: "ZG-4295-LB", model: "MAN Lion's City 12E NL326" },
+            "3024": { reg: "ZG-4296-LB", model: "MAN Lion's City 12E NL326" },
+            "3025": { reg: "ZG-4297-LB", model: "MAN Lion's City 12E NL326" },
+            "3026": { reg: "ZG-4298-LB", model: "MAN Lion's City 12E NL326" },
+            "3027": { reg: "ZG-4299-LB", model: "MAN Lion's City 12E NL326" },
+            "3028": { reg: "ZG-4300-LB", model: "MAN Lion's City 12E NL326" },
+            "3029": { reg: "ZG-4301-LB", model: "MAN Lion's City 12E NL326" },
+            "3030": { reg: "ZG-4302-LB", model: "MAN Lion's City 12E NL326" },
+            "3031": { reg: "ZG-4303-LB", model: "MAN Lion's City 12E NL326" },
+            "3032": { reg: "ZG-4304-LB", model: "MAN Lion's City 12E NL326" },
+            "3501": { reg: "ZG-4249-LB", model: "MAN Lion's City 18E NG544" },
+            "3502": { reg: "ZG-4250-LB", model: "MAN Lion's City 18E NG544" },
+            "3503": { reg: "ZG-4251-LB", model: "MAN Lion's City 18E NG544" },
+            "3504": { reg: "ZG-4252-LB", model: "MAN Lion's City 18E NG544" },
+            "3505": { reg: "ZG-4253-LB", model: "MAN Lion's City 18E NG544" },
+            "3506": { reg: "ZG-4254-LB", model: "MAN Lion's City 18E NG544" },
+            "3507": { reg: "ZG-4255-LB", model: "MAN Lion's City 18E NG544" },
+            "3508": { reg: "ZG-4256-LB", model: "MAN Lion's City 18E NG544" },
+            "3509": { reg: "ZG-4257-LB", model: "MAN Lion's City 18E NG544" },
+            "3510": { reg: "ZG-4258-LB", model: "MAN Lion's City 18E NG544" },
+            "3511": { reg: "ZG-4259-LB", model: "MAN Lion's City 18E NG544" },
+            "3512": { reg: "ZG-4260-LB", model: "MAN Lion's City 18E NG544" },
+            "3513": { reg: "ZG-4261-LB", model: "MAN Lion's City 18E NG544" },
+            "3514": { reg: "ZG-4262-LB", model: "MAN Lion's City 18E NG544" },
+            "3515": { reg: "ZG-4263-LB", model: "MAN Lion's City 18E NG544" },
+            "3516": { reg: "ZG-4264-LB", model: "MAN Lion's City 18E NG544" },
+            "3517": { reg: "ZG-4265-LB", model: "MAN Lion's City 18E NG544" },
+            "3518": { reg: "ZG-4266-LB", model: "MAN Lion's City 18E NG544" },
+            "3519": { reg: "ZG-4267-LB", model: "MAN Lion's City 18E NG544" },
+            "3520": { reg: "ZG-4268-LB", model: "MAN Lion's City 18E NG544" },
+            "3521": { reg: "ZG-4269-LB", model: "MAN Lion's City 18E NG544" },
+            "3522": { reg: "ZG-4270-LB", model: "MAN Lion's City 18E NG544" },
+            "3523": { reg: "ZG-4271-LB", model: "MAN Lion's City 18E NG544" },
+            "3524": { reg: "ZG-4272-LB", model: "MAN Lion's City 18E NG544" },
+            "3525": { reg: "ZG-4273-LB", model: "MAN Lion's City 18E NG544" },
+            "3526": { reg: "ZG-4274-LB", model: "MAN Lion's City 18E NG544" },
+            "3901": { reg: "ZG-2637-LF", model: "Feniksbus Iveco FBI 83 M-E" },
+            "3902": { reg: "ZG-2638-LF", model: "Feniksbus Iveco FBI 83 M-E" },
+            "3903": { reg: "ZG-2639-LF", model: "Feniksbus Iveco FBI 83 M-E" },
+            "3904": { reg: "ZG-2640-LF", model: "Feniksbus Iveco FBI 83 M-E" },
+            "3905": { reg: "ZG-2641-LF", model: "Feniksbus Iveco FBI 83 M-E" },
+            "3906": { reg: "ZG-2642-LF", model: "Feniksbus Iveco FBI 83 M-E" }
+        };
+
+        // ============================================================
+        // MAPA
+        // ============================================================
         const map = L.map('map', {
             center: [45.815, 15.982],
             zoom: 13,
@@ -303,13 +932,63 @@
         let highlightedId = null;
         let currentRoutePolyline = null;
         let currentStopMarkers = [];
-        
-        // KEŠ za rute i tripove
-        const shapeCache = {};   // { tripId: geojson }
-        const tripCache = {};    // { tripId: tripData }
+
+        const shapeCache = {};
+        const tripCache = {};
 
         // ============================================================
-        // FORMAT VREMENA - sekunde od ponoći → HH:MM
+        // POVIJEST - TRAJNO PAMĆENJE
+        // ============================================================
+        function loadHistory() {
+            try {
+                const data = localStorage.getItem(HISTORY_KEY);
+                if (data) return JSON.parse(data);
+            } catch(e) {}
+            return {};
+        }
+
+        function saveHistory(history) {
+            try {
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            } catch(e) {}
+        }
+
+        let busHistory = loadHistory();
+
+        // Zapiši vozilo u povijest
+        function recordVehicleInHistory(v) {
+            const gbr = v.id;
+            const now = new Date().toISOString();
+            
+            if (!busHistory[gbr]) {
+                busHistory[gbr] = {
+                    gbr: gbr,
+                    line: v.line,
+                    lineName: routes[v.routeId]?.longName || '',
+                    lastSeen: now,
+                    firstSeen: now,
+                    totalRides: 1,
+                    type: v.routeType
+                };
+            } else {
+                const prev = busHistory[gbr];
+                // Ako je promijenio liniju, povećaj broj vožnji
+                if (prev.line !== v.line) {
+                    prev.totalRides = (prev.totalRides || 1) + 1;
+                }
+                prev.line = v.line;
+                prev.lineName = routes[v.routeId]?.longName || '';
+                prev.lastSeen = now;
+                prev.type = v.routeType;
+            }
+        }
+
+        function saveHistoryDebounced() {
+            saveHistory(busHistory);
+        }
+
+        // ============================================================
+        // FORMAT VREMENA
         // ============================================================
         function formatTime(seconds) {
             const h = Math.floor(seconds / 3600) % 24;
@@ -317,9 +996,6 @@
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
 
-        // ============================================================
-        // FORMAT KAŠNJENJA
-        // ============================================================
         function formatDelay(delaySeconds) {
             if (delaySeconds === 0) return { text: 'Na vrijeme', class: 'ontime' };
             const min = Math.round(delaySeconds / 60);
@@ -328,12 +1004,11 @@
         }
 
         // ============================================================
-        // IKONA ZA VOZILO
+        // IKONA
         // ============================================================
         function createVehicleIcon(line, type, bearing, isHighlighted) {
             const isTram = type === 0;
             const className = isTram ? 'tram' : 'bus';
-            const special = (line === '307' || line === '308') ? 'special' : '';
             const highlight = isHighlighted ? 'highlighted' : '';
             
             let arrowHtml = '';
@@ -345,7 +1020,7 @@
                 html: `
                     <div style="position: relative;">
                         ${arrowHtml}
-                        <div class="bus-icon ${className} ${special} ${highlight}">${line}</div>
+                        <div class="bus-icon ${className} ${highlight}">${line}</div>
                     </div>
                 `,
                 className: '',
@@ -355,7 +1030,7 @@
         }
 
         // ============================================================
-        // DOHVATI RUTE
+        // DOHVATI PODATKE
         // ============================================================
         async function loadRoutes() {
             try {
@@ -368,34 +1043,21 @@
                         type: r.routeType
                     };
                 });
-                console.log(`✅ Učitano ${Object.keys(routes).length} linija`);
-            } catch (e) {
-                console.error('❌ Greška:', e);
-            }
+            } catch (e) { console.error(e); }
         }
 
-        // ============================================================
-        // DOHVATI STANICE
-        // ============================================================
         async function loadStops() {
             try {
                 const resp = await fetch(`${API_BASE}/stops`);
                 const data = await resp.json();
                 stops = data.features || [];
-                console.log(`✅ Učitano ${stops.length} stanica`);
-            } catch (e) {
-                console.error('❌ Greška:', e);
-            }
+            } catch (e) { console.error(e); }
         }
 
-        // ============================================================
-        // DOHVATI VOZILA
-        // ============================================================
         async function loadVehicles() {
             try {
                 const resp = await fetch(`${API_BASE}/vehicles/locations`);
                 const data = await resp.json();
-                
                 if (!data.features) return;
 
                 const currentIds = new Set();
@@ -420,8 +1082,11 @@
                         realTime: p.realTime,
                         timestamp: p.timestamp,
                         departureTime: p.departureTime,
-                        tripId: p.tripId  // VAŽNO za dohvat detalja
+                        tripId: p.tripId
                     };
+
+                    // ZAPIŠI U POVIJEST
+                    recordVehicleInHistory(v);
 
                     if (vehicles[p.vehicleId]) {
                         vehicles[p.vehicleId].marker.setLatLng([lat, lng]);
@@ -447,62 +1112,49 @@
                     }
                 }
 
+                // SPREMI POVIJEST
+                saveHistoryDebounced();
+
                 document.getElementById('statsText').innerHTML = 
                     `${new Date().toLocaleTimeString('hr-HR')} | ${Object.keys(vehicles).length} vozila`;
 
-                // Osvježi panel ako je otvoren
                 if (activeVehicleId && vehicles[activeVehicleId]) {
                     updateVehicleHeader(vehicles[activeVehicleId].data);
                 }
 
             } catch (e) {
-                console.error('❌ Greška:', e);
+                console.error(e);
                 document.getElementById('statsText').innerHTML = 'Greška';
             }
         }
 
-        // ============================================================
-        // DOHVATI DETALJE TRIPA
-        // ============================================================
         async function loadTripDetails(tripId) {
             if (tripCache[tripId]) return tripCache[tripId];
-            
             try {
                 const resp = await fetch(`${API_BASE}/trips/${tripId}`);
                 const data = await resp.json();
                 tripCache[tripId] = data;
                 return data;
-            } catch (e) {
-                console.error('❌ Greška trip:', e);
-                return null;
-            }
+            } catch (e) { return null; }
         }
 
-        // ============================================================
-        // DOHVATI SHAPE (geometriju rute)
-        // ============================================================
         async function loadTripShape(tripId) {
             if (shapeCache[tripId]) return shapeCache[tripId];
-            
             try {
                 const resp = await fetch(`${API_BASE}/trips/${tripId}/shape`);
                 const data = await resp.json();
                 shapeCache[tripId] = data;
                 return data;
-            } catch (e) {
-                console.error('❌ Greška shape:', e);
-                return null;
-            }
+            } catch (e) { return null; }
         }
 
         // ============================================================
-        // PRIKAŽI DETALJE VOZILA
+        // PRIKAŽI VOZILO
         // ============================================================
         async function showVehicleDetails(v) {
             activeVehicleId = v.id;
             highlightedId = v.id;
             
-            // Skini highlight s prethodnog
             Object.values(vehicles).forEach(veh => {
                 if (veh.data.id !== v.id) {
                     veh.marker.setIcon(createVehicleIcon(veh.data.line, veh.data.routeType, veh.data.bearing, false));
@@ -510,7 +1162,6 @@
                 }
             });
             
-            // Postavi highlight
             if (vehicles[v.id]) {
                 vehicles[v.id].marker.setIcon(createVehicleIcon(v.line, v.routeType, v.bearing, true));
                 vehicles[v.id].marker.setZIndexOffset(1000);
@@ -520,85 +1171,58 @@
             updateVehicleHeader(v);
             updateVehicleMeta(v);
             
-            // Centriraj s animacijom
             map.flyTo([v.lat, v.lng], 15, { duration: 0.8 });
             
-            // PRIKAŽI RUTU
             showRouteLoader(true);
-            
-            // Iscrtaj rutu
             await drawRoute(v.tripId);
-            
-            // Učitaj stanice
             await loadAndShowStops(v.tripId, v);
-            
             showRouteLoader(false);
         }
 
-        // ============================================================
-        // ISCRTAJ RUTU NA KARTI
-        // ============================================================
         async function drawRoute(tripId) {
-            // Ukloni prethodnu rutu
             if (currentRoutePolyline) {
                 map.removeLayer(currentRoutePolyline);
                 currentRoutePolyline = null;
             }
-            
-            // Ukloni prethodne stanice s rute
             currentStopMarkers.forEach(m => map.removeLayer(m));
             currentStopMarkers = [];
             
-            // Dohvati shape
             const shape = await loadTripShape(tripId);
-            if (!shape || !shape.geometry || !shape.geometry.coordinates) {
-                console.warn('Nema shape za trip:', tripId);
-                return;
-            }
+            if (!shape || !shape.geometry) return;
             
-            // Pretvori [lng, lat] u [lat, lng] za Leaflet
             const latlngs = shape.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
             
-            // Iscrtaj liniju rute
-            currentRoutePolyline = L.polyline(latlngs, {
-                color: '#7c3aed',
-                weight: 5,
-                opacity: 0.8,
-                lineJoin: 'round',
-                lineCap: 'round'
-            }).addTo(map);
-            
-            // Dodaj sjenu ispod
-            const shadowLine = L.polyline(latlngs, {
+            L.polyline(latlngs, {
                 color: '#4c1d95',
                 weight: 8,
                 opacity: 0.3,
                 lineJoin: 'round'
             }).addTo(map);
-            currentRoutePolyline.bringToFront();
             
-            // Zoom na rutu
+            currentRoutePolyline = L.polyline(latlngs, {
+                color: '#7c3aed',
+                weight: 5,
+                opacity: 0.9,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+            
             map.fitBounds(currentRoutePolyline.getBounds(), { padding: [50, 50] });
         }
 
-        // ============================================================
-        // UČITAJ I PRIKAŽI STANICE
-        // ============================================================
         async function loadAndShowStops(tripId, v) {
             const stopsList = document.getElementById('panelStops');
             stopsList.innerHTML = '<li style="color:#6b7280;text-align:center;padding:20px;">Učitavanje stanica...</li>';
             
             const trip = await loadTripDetails(tripId);
             if (!trip || !trip.stopTimes) {
-                stopsList.innerHTML = '<li style="color:#dc2626;text-align:center;padding:20px;">Nema podataka o stanicama</li>';
+                stopsList.innerHTML = '<li style="color:#dc2626;text-align:center;padding:20px;">Nema podataka</li>';
                 return;
             }
             
-            // Trenutno vrijeme (sekunde od ponoći)
             const now = new Date();
             const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
             
-            // Nađi sljedeću stanicu (prva čije je vrijeme > sada)
             let nextIndex = -1;
             for (let i = 0; i < trip.stopTimes.length; i++) {
                 if (trip.stopTimes[i].arrivalTime > nowSeconds) {
@@ -607,21 +1231,16 @@
                 }
             }
             
-            // Generiraj HTML
-            const html = trip.stopTimes.map((stop, i) => {
+            stopsList.innerHTML = trip.stopTimes.map((stop, i) => {
                 const time = formatTime(stop.arrivalTime);
                 const delay = formatDelay(stop.arrivalDelay || 0);
                 const isPassed = i < nextIndex;
                 const isNext = i === nextIndex;
                 
-                const classes = [
-                    'stop-item',
-                    isPassed ? 'passed' : '',
-                    isNext ? 'next' : ''
-                ].filter(Boolean).join(' ');
+                const classes = ['stop-item', isPassed ? 'passed' : '', isNext ? 'next' : ''].filter(Boolean).join(' ');
                 
                 const delayHtml = stop.realTime 
-                    ? `<span class="stop-delay ${delay.class}">${delay.text}</span>`
+                    ? `<span class="stop-delay ${delay.class}">${delay.text}</span>` 
                     : '';
                 
                 return `
@@ -632,13 +1251,8 @@
                     </li>
                 `;
             }).join('');
-            
-            stopsList.innerHTML = html || '<li style="color:#6b7280;text-align:center;padding:20px;">Nema stanica</li>';
         }
 
-        // ============================================================
-        // UPDATE HEADER
-        // ============================================================
         function updateVehicleHeader(v) {
             if (!v) return;
             document.getElementById('panelLine').textContent = v.line;
@@ -647,7 +1261,7 @@
         }
 
         // ============================================================
-        // UPDATE META
+        // META PODACI (s markom i registracijom!)
         // ============================================================
         function updateVehicleMeta(v) {
             if (!v) return;
@@ -655,10 +1269,23 @@
             const typeText = v.routeType === 0 ? '🚋 Tramvaj' : '🚌 Autobus';
             const delay = formatDelay(v.delay || 0);
             
+            // Dohvati marku i registraciju iz baze
+            const vehicleInfo = vehicleDatabase[v.id] || {};
+            const model = vehicleInfo.model || 'Nepoznato';
+            const reg = vehicleInfo.reg || 'Nepoznato';
+            
             document.getElementById('panelMeta').innerHTML = `
                 <div class="vehicle-meta-row">
                     <span class="vehicle-meta-label">Tip:</span>
                     <span class="vehicle-meta-value">${typeText}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Marka:</span>
+                    <span class="vehicle-meta-value">${model}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Registracija:</span>
+                    <span class="vehicle-meta-value">${reg}</span>
                 </div>
                 <div class="vehicle-meta-row">
                     <span class="vehicle-meta-label">Linija:</span>
@@ -687,9 +1314,6 @@
             document.getElementById('routeLoader').classList.toggle('visible', show);
         }
 
-        // ============================================================
-        // ZATVORI PANEL
-        // ============================================================
         function closeVehiclePanel() {
             document.getElementById('vehiclePanel').classList.remove('visible');
             activeVehicleId = null;
@@ -701,7 +1325,6 @@
             }
             highlightedId = null;
             
-            // Ukloni rutu
             if (currentRoutePolyline) {
                 map.removeLayer(currentRoutePolyline);
                 currentRoutePolyline = null;
@@ -710,13 +1333,9 @@
             currentStopMarkers = [];
         }
 
-        // ============================================================
-        // TABOVI
-        // ============================================================
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
             document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
         }
@@ -730,22 +1349,15 @@
             
             input.addEventListener('input', () => {
                 const query = input.value.toLowerCase().trim();
-                
-                if (!query) {
-                    results.classList.remove('visible');
-                    return;
-                }
+                if (!query) { results.classList.remove('visible'); return; }
                 
                 const matches = [];
                 Object.values(vehicles).forEach(v => {
-                    const data = v.data;
-                    const match = 
-                        data.id.toLowerCase().includes(query) ||
-                        data.line.toLowerCase().includes(query) ||
-                        data.dest.toLowerCase().includes(query);
-                    
-                    if (match) {
-                        matches.push(data);
+                    const d = v.data;
+                    if (d.id.toLowerCase().includes(query) || 
+                        d.line.toLowerCase().includes(query) || 
+                        d.dest.toLowerCase().includes(query)) {
+                        matches.push(d);
                     }
                 });
                 
@@ -771,9 +1383,7 @@
             });
             
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('.search-box')) {
-                    results.classList.remove('visible');
-                }
+                if (!e.target.closest('.search-box')) results.classList.remove('visible');
             });
         }
 
@@ -810,6 +1420,100 @@
                 v.marker.setOpacity(v.data.routeType === 3 ? 1 : 0.15);
             });
             document.getElementById('sideMenu').classList.remove('visible');
+        }
+
+        // ============================================================
+        // POVIJEST - PRIKAZ
+        // ============================================================
+        function showHistory() {
+            document.getElementById('sideMenu').classList.remove('visible');
+            document.getElementById('historyPanel').classList.add('visible');
+            renderHistory();
+        }
+
+        function closeHistory() {
+            document.getElementById('historyPanel').classList.remove('visible');
+        }
+
+        function clearHistory() {
+            if (!confirm('Sigurno želiš obrisati cijelu povijest?')) return;
+            busHistory = {};
+            saveHistory(busHistory);
+            document.getElementById('sideMenu').classList.remove('visible');
+            alert('Povijest je obrisana');
+        }
+
+        function renderHistory() {
+            const filter = document.getElementById('historyFilter').value.toLowerCase().trim();
+            const list = document.getElementById('historyList');
+            const stats = document.getElementById('historyStats');
+            
+            const items = Object.values(busHistory);
+            
+            // Statistika
+            const totalBuses = items.length;
+            const activeNow = Object.keys(vehicles).length;
+            const totalRides = items.reduce((sum, v) => sum + (v.totalRides || 1), 0);
+            
+            stats.innerHTML = `
+                <div>📊 Ukupno: <strong>${totalBuses}</strong></div>
+                <div>✅ Aktivnih sada: <strong>${activeNow}</strong></div>
+                <div>🔄 Vožnji: <strong>${totalRides}</strong></div>
+            `;
+            
+            // Filtriraj
+            let filtered = items;
+            if (filter) {
+                filtered = items.filter(item => {
+                    const model = vehicleDatabase[item.gbr]?.model || '';
+                    const reg = vehicleDatabase[item.gbr]?.reg || '';
+                    return item.gbr.toLowerCase().includes(filter) ||
+                           (item.line || '').toLowerCase().includes(filter) ||
+                           model.toLowerCase().includes(filter) ||
+                           reg.toLowerCase().includes(filter);
+                });
+            }
+            
+            // Sortiraj po zadnjem viđenju (najnovije prvo)
+            filtered.sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+            
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="history-empty">📭 Nema podataka</div>';
+                return;
+            }
+            
+            list.innerHTML = filtered.map(item => {
+                const vInfo = vehicleDatabase[item.gbr] || {};
+                const isActive = vehicles[item.gbr] ? true : false;
+                const lastSeen = new Date(item.lastSeen);
+                const timeAgo = getTimeAgo(lastSeen);
+                const isTram = item.type === 0;
+                
+                return `
+                    <div class="history-item">
+                        <span class="history-badge ${isTram ? '' : 'bus'}">${item.line || '-'}</span>
+                        <div class="history-info">
+                            <strong>GBR ${item.gbr} ${isActive ? '🟢' : '⚪'}</strong>
+                            <small>${vInfo.model || 'Nepoznato'} · ${vInfo.reg || ''}</small>
+                        </div>
+                        <div class="history-time">
+                            ${timeAgo}<br>
+                            <small>${lastSeen.toLocaleTimeString('hr-HR', {hour: '2-digit', minute: '2-digit'})}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = (now - date) / 1000;
+            
+            if (diff < 60) return 'sada';
+            if (diff < 3600) return `${Math.floor(diff/60)} min`;
+            if (diff < 86400) return `${Math.floor(diff/3600)} h`;
+            if (diff < 604800) return `${Math.floor(diff/86400)} d`;
+            return date.toLocaleDateString('hr-HR');
         }
 
         // ============================================================
