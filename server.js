@@ -19,15 +19,22 @@ app.get('/health', (req, res) => {
 });
 
 // ============================================================
-// PROXY za zet.ficko.dev (rješava CORS problem)
+// POMOĆNA FUNKCIJA - DANAŠNJI DATUM (YYYYMMDD)
 // ============================================================
-app.get('/proxy/vr/:vr', (req, res) => {
-    const vr = req.params.vr;
+function getTodayString() {
+    const d = new Date();
+    return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ============================================================
+// PROXY za zet.ficko.dev - popis SVIH VR-ova
+// GET /proxy/vrs?date=YYYYMMDD
+// ============================================================
+app.get('/proxy/vrs', (req, res) => {
     const date = req.query.date || getTodayString();
+    const url = `https://zet.ficko.dev/api/vrs?date=${date}`;
     
-    const url = `https://zet.ficko.dev/${vr}?date=${date}`;
-    
-    console.log(`📡 Proxy: ${url}`);
+    console.log(`📡 Proxy VRS: ${url}`);
     
     https.get(url, (apiRes) => {
         let data = '';
@@ -37,7 +44,6 @@ app.get('/proxy/vr/:vr', (req, res) => {
         });
         
         apiRes.on('end', () => {
-            // Postavi CORS headere
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Content-Type', 'application/json');
             
@@ -56,19 +62,59 @@ app.get('/proxy/vr/:vr', (req, res) => {
             }
         });
     }).on('error', (err) => {
-        console.error('❌ Proxy greška:', err.message);
+        console.error('❌ Proxy VRS greška:', err.message);
         res.status(500).json({ error: err.message });
     });
 });
 
-// Pomoćna funkcija za današnji datum
-function getTodayString() {
-    const d = new Date();
-    return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-}
+// ============================================================
+// PROXY za zet.ficko.dev - detalji VR-a (polasci)
+// GET /proxy/vr/:vr?date=YYYYMMDD
+// ============================================================
+app.get('/proxy/vr/:vr', (req, res) => {
+    const vr = req.params.vr;
+    const date = req.query.date || getTodayString();
+    const url = `https://zet.ficko.dev/api/vr/${vr}?date=${date}`;
+    
+    console.log(`📡 Proxy VR ${vr}: ${url}`);
+    
+    https.get(url, (apiRes) => {
+        let data = '';
+        
+        apiRes.on('data', (chunk) => {
+            data += chunk;
+        });
+        
+        apiRes.on('end', () => {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Content-Type', 'application/json');
+            
+            if (apiRes.statusCode === 200) {
+                try {
+                    const json = JSON.parse(data);
+                    res.json(json);
+                } catch (e) {
+                    res.status(500).json({ error: 'Invalid JSON', raw: data.substring(0, 200) });
+                }
+            } else {
+                res.status(apiRes.statusCode).json({ 
+                    error: `API returned ${apiRes.statusCode}`,
+                    url: url
+                });
+            }
+        });
+    }).on('error', (err) => {
+        console.error(`❌ Proxy VR ${vr} greška:`, err.message);
+        res.status(500).json({ error: err.message });
+    });
+});
 
+// ============================================================
+// STARTANJE SERVERA
+// ============================================================
 app.listen(PORT, () => {
     console.log(`🚋 ZETko server radi na portu ${PORT}`);
     console.log(`🌐 Otvori: http://localhost:${PORT}`);
-    console.log(`📡 Proxy: /proxy/vr/{VR}?date={YYYYMMDD}`);
+    console.log(`📡 Proxy VRS: /proxy/vrs?date={YYYYMMDD}`);
+    console.log(`📡 Proxy VR: /proxy/vr/{VR}?date={YYYYMMDD}`);
 });
