@@ -65,7 +65,6 @@
         .search-result-info { flex: 1; }
         .search-result-info small { color: #6b7280; font-size: 11px; }
 
-        /* VOZILO PANEL */
         .vehicle-panel {
             position: absolute; top: 70px; left: 12px;
             width: 380px; max-width: calc(100% - 24px);
@@ -186,7 +185,6 @@
             text-shadow: 0 0 2px white;
         }
 
-        /* STANICE NA RUTI */
         .route-stop-marker {
             width: 14px; height: 14px;
             background: white; border-radius: 50%;
@@ -240,7 +238,6 @@
         }
         .route-loader.visible { display: block; }
 
-        /* POVIJEST */
         .history-panel {
             position: fixed; top: 0; left: 0;
             width: 100%; height: 100vh;
@@ -265,66 +262,45 @@
         .history-content { flex: 1; overflow-y: auto; padding: 20px; }
 
         .history-intro {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            color: #856404;
-            margin-bottom: 20px;
-            max-width: 1400px;
-            margin-left: auto;
-            margin-right: auto;
+            background: #fff3cd; border-left: 4px solid #ffc107;
+            padding: 12px 16px; border-radius: 8px;
+            font-size: 13px; color: #856404;
+            margin-bottom: 20px; max-width: 1400px;
+            margin-left: auto; margin-right: auto;
         }
 
         .history-layout {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
+            display: grid; grid-template-columns: 320px 1fr;
+            gap: 20px; max-width: 1400px; margin: 0 auto;
         }
 
         .history-sidebar {
-            background: white;
-            border-radius: 12px;
+            background: white; border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            padding: 16px;
-            height: fit-content;
+            padding: 16px; height: fit-content;
             max-height: calc(100vh - 180px);
             display: flex; flex-direction: column;
             position: sticky; top: 20px;
         }
         .history-sidebar h3 {
             font-size: 13px; color: #6b7280;
-            margin-bottom: 12px;
-            text-transform: uppercase;
+            margin-bottom: 12px; text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .history-search {
             width: 100%; padding: 10px 14px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 13px; outline: none;
-            margin-bottom: 12px;
+            border: 1px solid #e5e7eb; border-radius: 8px;
+            font-size: 13px; outline: none; margin-bottom: 12px;
         }
         .history-search:focus { border-color: #7c3aed; }
-
-        .history-vehicle-list {
-            overflow-y: auto; flex: 1;
-        }
+        .history-vehicle-list { overflow-y: auto; flex: 1; }
         .history-vehicle-item {
-            padding: 10px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex; align-items: center;
-            gap: 10px; margin-bottom: 4px;
-            transition: all 0.15s;
+            padding: 10px 12px; border-radius: 8px;
+            cursor: pointer; display: flex; align-items: center;
+            gap: 10px; margin-bottom: 4px; transition: all 0.15s;
         }
         .history-vehicle-item:hover { background: #f3f4f6; }
-        .history-vehicle-item.active {
-            background: #4c1d95; color: white;
-        }
+        .history-vehicle-item.active { background: #4c1d95; color: white; }
         .history-vehicle-item.active .history-vehicle-model { color: rgba(255,255,255,0.7); }
         .history-vehicle-gbr {
             background: #4c1d95; color: white;
@@ -336,70 +312,44 @@
             background: white; color: #4c1d95;
         }
         .history-vehicle-model {
-            font-size: 11px; color: #6b7280;
-            flex: 1;
+            font-size: 11px; color: #6b7280; flex: 1;
         }
 
         .history-main {
-            background: white;
-            border-radius: 12px;
+            background: white; border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            padding: 20px;
-            min-height: 400px;
+            padding: 20px; min-height: 400px;
         }
-        .history-main h3 {
-            font-size: 18px; color: #1f2937;
-            margin-bottom: 8px;
-        }
+        .history-main h3 { font-size: 18px; color: #1f2937; margin-bottom: 8px; }
         .history-main .vehicle-info {
             font-size: 13px; color: #6b7280;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
+            margin-bottom: 20px; padding-bottom: 16px;
             border-bottom: 1px solid #e5e7eb;
         }
-
         .history-empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #9ca3af;
+            text-align: center; padding: 60px 20px; color: #9ca3af;
         }
-        .history-empty-state .icon {
-            font-size: 48px; margin-bottom: 12px;
-        }
+        .history-empty-state .icon { font-size: 48px; margin-bottom: 12px; }
 
         .day-group { margin-bottom: 24px; }
         .day-header {
-            background: #f3f4f6;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: 700; font-size: 14px;
-            color: #4c1d95;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: #f3f4f6; padding: 10px 16px;
+            border-radius: 8px; font-weight: 700; font-size: 14px;
+            color: #4c1d95; margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
         }
         .day-count {
             background: #4c1d95; color: white;
-            padding: 2px 10px; border-radius: 20px;
-            font-size: 11px;
+            padding: 2px 10px; border-radius: 20px; font-size: 11px;
         }
         .ride-item {
-            padding: 10px 16px;
-            border-left: 3px solid #e5e7eb;
+            padding: 10px 16px; border-left: 3px solid #e5e7eb;
             margin-left: 8px; margin-bottom: 4px;
             display: flex; align-items: center;
-            gap: 12px; font-size: 13px;
-            transition: all 0.15s;
+            gap: 12px; font-size: 13px; transition: all 0.15s;
         }
-        .ride-item:hover {
-            background: #f9fafb;
-            border-left-color: #7c3aed;
-        }
-        .ride-time {
-            font-weight: 700; color: #4c1d95;
-            min-width: 60px;
-        }
+        .ride-item:hover { background: #f9fafb; border-left-color: #7c3aed; }
+        .ride-time { font-weight: 700; color: #4c1d95; min-width: 60px; }
         .ride-line {
             background: #ea580c; color: white;
             padding: 2px 10px; border-radius: 6px;
@@ -410,114 +360,62 @@
         .ride-dest { flex: 1; color: #1f2937; }
         .ride-dest::before { content: '→ '; color: #9ca3af; }
 
-        /* POPUP ZA STANICU */
         .stop-popup {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            min-width: 280px;
-            max-width: 340px;
+            min-width: 280px; max-width: 340px;
         }
         .stop-popup-header {
             background: linear-gradient(135deg, #4c1d95, #7c3aed);
-            color: white;
-            padding: 12px 16px;
+            color: white; padding: 12px 16px;
             margin: -14px -20px 12px -20px;
             border-radius: 12px 12px 0 0;
         }
-        .stop-popup-header h3 {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-        .stop-popup-header small {
-            font-size: 11px;
-            opacity: 0.85;
-        }
-        .stop-popup-list {
-            list-style: none;
-            max-height: 300px;
-            overflow-y: auto;
-        }
+        .stop-popup-header h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .stop-popup-header small { font-size: 11px; opacity: 0.85; }
+        .stop-popup-list { list-style: none; max-height: 300px; overflow-y: auto; }
         .stop-popup-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 4px;
-            border-bottom: 1px solid #f3f4f6;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 4px; border-bottom: 1px solid #f3f4f6;
             font-size: 13px;
         }
         .stop-popup-item:last-child { border-bottom: none; }
         .stop-popup-line {
-            padding: 3px 10px;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 12px;
-            min-width: 42px;
-            text-align: center;
-            color: white;
-            background: #ea580c;
+            padding: 3px 10px; border-radius: 6px;
+            font-weight: 700; font-size: 12px;
+            min-width: 42px; text-align: center;
+            color: white; background: #ea580c;
         }
         .stop-popup-line.tram { background: #2563eb; }
         .stop-popup-info { flex: 1; }
-        .stop-popup-info strong {
-            display: block;
-            font-size: 12px;
-            color: #1f2937;
-        }
-        .stop-popup-info small {
-            font-size: 10px;
-            color: #6b7280;
-        }
+        .stop-popup-info strong { display: block; font-size: 12px; color: #1f2937; }
+        .stop-popup-info small { font-size: 10px; color: #6b7280; }
         .stop-popup-time {
-            font-weight: 700;
-            color: #4c1d95;
-            font-size: 14px;
-            min-width: 50px;
-            text-align: right;
+            font-weight: 700; color: #4c1d95;
+            font-size: 14px; min-width: 50px; text-align: right;
         }
-        .stop-popup-time.now {
-            color: #16a34a;
-            animation: pulse 1.5s infinite;
-        }
-        .stop-popup-time.soon {
-            color: #ea580c;
-        }
+        .stop-popup-time.now { color: #16a34a; animation: pulse 1.5s infinite; }
+        .stop-popup-time.soon { color: #ea580c; }
         .stop-popup-empty {
-            text-align: center;
-            padding: 20px;
-            color: #9ca3af;
-            font-size: 13px;
+            text-align: center; padding: 20px;
+            color: #9ca3af; font-size: 13px;
         }
         .stop-popup-loading {
-            text-align: center;
-            padding: 20px;
-            color: #7c3aed;
-            font-size: 13px;
+            text-align: center; padding: 20px;
+            color: #7c3aed; font-size: 13px;
         }
         .stop-popup-loading .spinner {
-            display: inline-block;
-            width: 16px; height: 16px;
-            border: 2px solid #e5e7eb;
-            border-top-color: #7c3aed;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid #e5e7eb; border-top-color: #7c3aed;
+            border-radius: 50%; animation: spin 1s linear infinite;
+            margin-right: 8px; vertical-align: middle;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-
-        .leaflet-popup-content-wrapper {
-            border-radius: 12px;
-            padding: 14px 20px;
-        }
-        .leaflet-popup-content {
-            margin: 0;
-        }
+        .leaflet-popup-content-wrapper { border-radius: 12px; padding: 14px 20px; }
+        .leaflet-popup-content { margin: 0; }
 
         @media (max-width: 768px) {
             .history-layout { grid-template-columns: 1fr; }
@@ -558,7 +456,6 @@
                 <div class="tab" data-tab="details" onclick="switchTab('details')">📋 Detalji</div>
             </div>
         </div>
-        
         <div class="vehicle-body">
             <div class="tab-content active" id="tab-stops">
                 <ul class="stop-list" id="panelStops">
@@ -578,7 +475,7 @@
         </div>
         <div class="history-content">
             <div class="history-intro">
-                ℹ️ Bilježi se svaki put kad vozilo promijeni polazak (nova linija, novi smjer ili novo vrijeme polaska).
+                ℹ️ Bilježi se svaki put kad vozilo promijeni polazak.
             </div>
             <div class="history-layout">
                 <div class="history-sidebar">
@@ -606,7 +503,7 @@
         const REFRESH_INTERVAL = 10000;
         const HISTORY_KEY = 'zetko_rides_v1';
         const STOPS_ARRIVALS_CACHE = {};
-        const STOPS_ARRIVALS_TTL = 30000; // 30 sekundi
+        const STOPS_ARRIVALS_TTL = 30000;
 
         // ============================================================
         // BAZA VOZILA - AUTOBUSI
@@ -1160,40 +1057,42 @@
         };
 
         // ============================================================
-        // TRAMVAJI - GENERIRANJE
+        // TRAMVAJI - GENERIRANJE (bez registracije)
         // ============================================================
         function addTramsToDatabase() {
-            // ČKD Tatra KT4: 301-350
+            // ČKD Tatra KT4: 301-350 → 10301-10350
             for (let i = 301; i <= 350; i++) {
-                vehicleDatabase[String(i)] = { reg: "Nepoznato", model: "ČKD Tatra KT4" };
+                vehicleDatabase["10" + i] = { model: "ČKD Tatra KT4", isTram: true };
             }
-            // ČKD Tatra KT4t: 351
-            vehicleDatabase["351"] = { reg: "Nepoznato", model: "ČKD Tatra KT4t" };
-            // ČKD Tatra T4: 401-499
+            // ČKD Tatra KT4t: 351 → 10351
+            vehicleDatabase["10351"] = { model: "ČKD Tatra KT4t", isTram: true };
+            // ČKD Tatra T4: 401-499 → 10401-10499
             for (let i = 401; i <= 499; i++) {
-                vehicleDatabase[String(i)] = { reg: "Nepoznato", model: "ČKD Tatra T4" };
+                vehicleDatabase["10" + i] = { model: "ČKD Tatra T4", isTram: true };
             }
-            // TMK 2100: 2101-2116
+            // TMK 2100: 2101-2116 → 102101-102116
             for (let i = 2101; i <= 2116; i++) {
-                vehicleDatabase[String(i)] = { reg: "Nepoznato", model: "TMK 2100" };
+                vehicleDatabase["10" + i] = { model: "TMK 2100", isTram: true };
             }
-            // TMK 2200: 2201-22140
-            for (let i = 2201; i <= 22140; i++) {
-                vehicleDatabase[String(i)] = { reg: "Nepoznato", model: "TMK 2200" };
+            // TMK 2200: 2201-2299 → 102201-102299
+            for (let i = 2201; i <= 2299; i++) {
+                vehicleDatabase["10" + i] = { model: "TMK 2200", isTram: true };
             }
-            // TMK 2300: 2301-2302
+            // TMK 2200: 22101-22140 → 22101-22140 BEZ PREDBROJA
+            for (let i = 22101; i <= 22140; i++) {
+                vehicleDatabase[String(i)] = { model: "TMK 2200", isTram: true };
+            }
+            // TMK 2300: 2301-2302 → 102301-102302
             for (let i = 2301; i <= 2302; i++) {
-                vehicleDatabase[String(i)] = { reg: "Nepoznato", model: "TMK 2300" };
+                vehicleDatabase["10" + i] = { model: "TMK 2300", isTram: true };
             }
-            // TMK 2400: 2401-2440
+            // TMK 2400: 2401-2440 → 102401-102440
             for (let i = 2401; i <= 2440; i++) {
-                vehicleDatabase[String(i)] = { reg: "Nepoznato", model: "TMK 2400" };
+                vehicleDatabase["10" + i] = { model: "TMK 2400", isTram: true };
             }
-            console.log(`✅ Baza vozila: ${Object.keys(vehicleDatabase).length} ukupno (uključujući tramvaje)`);
+            console.log(`✅ Baza vozila: ${Object.keys(vehicleDatabase).length} ukupno`);
         }
-        addTramsToDatabase();
-
-        // ============================================================
+        addTramsToDatabase();        // ============================================================
         // MAPA
         // ============================================================
         const map = L.map('map', {
@@ -1211,22 +1110,104 @@
 
         let routes = {};
         let stops = [];
-        let stopsByStopId = {}; // { stopId: { name, lat, lng } }
+        let stopsByStopId = {};
         let vehicles = {};
         let activeVehicleId = null;
         let highlightedId = null;
         let currentRoutePolyline = null;
         let currentRouteShadow = null;
         let currentStopMarkers = [];
-        let currentStopCircles = [];
         let selectedHistoryVehicle = null;
-        let currentTripStopIds = []; // Redoslijed stopId-eva na trenutnoj ruti
+        let currentTripStopIds = [];
 
         const shapeCache = {};
         const tripCache = {};
 
         // ============================================================
-        // FORMAT VREMENA
+        // POVIJEST VOŽNJI
+        // ============================================================
+        function loadRides() {
+            try {
+                const data = localStorage.getItem(HISTORY_KEY);
+                if (data) return JSON.parse(data);
+            } catch(e) {}
+            return {};
+        }
+
+        function saveRides(rides) {
+            try {
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(rides));
+            } catch(e) {}
+        }
+
+        let ridesHistory = loadRides();
+        let lastRideKey = {};
+
+        function getRideKey(v) {
+            const date = new Date(v.timestamp);
+            const dateStr = date.toISOString().split('T')[0];
+            const timeStr = (v.departureTime || '').substring(0, 5);
+            return `${dateStr}|${timeStr}|${v.line}|${v.dest}`;
+        }
+
+        function recordRide(v) {
+            const gbr = v.id;
+            const key = getRideKey(v);
+
+            if (lastRideKey[gbr] === key) return false;
+            
+            if (ridesHistory[gbr]) {
+                const recent = ridesHistory[gbr].rides.slice(-50);
+                const parts = key.split('|');
+                if (recent.some(r => 
+                    r.date === parts[0] && 
+                    r.time === parts[1] && 
+                    r.line === v.line && 
+                    r.dest === v.dest
+                )) {
+                    lastRideKey[gbr] = key;
+                    return false;
+                }
+            }
+
+            const date = new Date(v.timestamp);
+            const dateStr = date.toISOString().split('T')[0];
+            const timeStr = (v.departureTime || '').substring(0, 5);
+            const vInfo = vehicleDatabase[gbr] || {};
+
+            if (!ridesHistory[gbr]) {
+                ridesHistory[gbr] = {
+                    gbr: gbr,
+                    model: vInfo.model || 'Nepoznato',
+                    reg: vInfo.reg || '',
+                    type: v.routeType,
+                    rides: []
+                };
+            } else {
+                ridesHistory[gbr].model = vInfo.model || ridesHistory[gbr].model;
+                ridesHistory[gbr].reg = vInfo.reg || ridesHistory[gbr].reg;
+            }
+
+            ridesHistory[gbr].rides.push({
+                date: dateStr,
+                time: timeStr,
+                line: v.line,
+                dest: v.dest,
+                routeId: v.routeId,
+                tripId: v.tripId,
+                timestamp: v.timestamp
+            });
+
+            if (ridesHistory[gbr].rides.length > 500) {
+                ridesHistory[gbr].rides = ridesHistory[gbr].rides.slice(-500);
+            }
+
+            lastRideKey[gbr] = key;
+            return true;
+        }
+
+        // ============================================================
+        // FORMAT
         // ============================================================
         function formatTime(seconds) {
             const h = Math.floor(seconds / 3600) % 24;
@@ -1289,7 +1270,6 @@
                 const resp = await fetch(`${API_BASE}/stops`);
                 const data = await resp.json();
                 stops = data.features || [];
-                // Napravi mapu stopId -> { name, lat, lng }
                 stops.forEach(s => {
                     if (s.geometry && s.geometry.coordinates) {
                         const [lng, lat] = s.geometry.coordinates;
@@ -1302,7 +1282,7 @@
                         };
                     }
                 });
-                console.log(`✅ Stanice: ${stops.length}, mapa: ${Object.keys(stopsByStopId).length}`);
+                console.log(`✅ Stanice: ${stops.length}`);
             } catch (e) { console.error('Greška stops:', e); }
         }
 
@@ -1313,6 +1293,7 @@
                 if (!data.features) return;
 
                 const currentIds = new Set();
+                let newRidesCount = 0;
 
                 data.features.forEach(f => {
                     const [lng, lat] = f.geometry.coordinates;
@@ -1336,6 +1317,8 @@
                         departureTime: p.departureTime,
                         tripId: p.tripId
                     };
+
+                    if (recordRide(v)) newRidesCount++;
 
                     if (vehicles[p.vehicleId]) {
                         vehicles[p.vehicleId].marker.setLatLng([lat, lng]);
@@ -1361,8 +1344,14 @@
                     }
                 }
 
+                if (newRidesCount > 0) saveRides(ridesHistory);
+
                 document.getElementById('statsText').innerHTML = 
                     `${new Date().toLocaleTimeString('hr-HR')} | ${Object.keys(vehicles).length} vozila`;
+
+                if (activeVehicleId && vehicles[activeVehicleId]) {
+                    updateVehicleHeader(vehicles[activeVehicleId].data);
+                }
 
             } catch (e) {
                 console.error('Greška vehicles:', e);
@@ -1422,7 +1411,6 @@
         }
 
         async function drawRoute(tripId) {
-            // Ukloni prethodnu rutu
             if (currentRoutePolyline) {
                 map.removeLayer(currentRoutePolyline);
                 currentRoutePolyline = null;
@@ -1452,21 +1440,16 @@
         // DODAJ OZNAKE STANICA NA RUTU
         // ============================================================
         async function addStopMarkersOnRoute(tripId, v) {
-            // Ukloni prethodne
             currentStopMarkers.forEach(m => map.removeLayer(m));
             currentStopMarkers = [];
-            currentStopCircles.forEach(c => map.removeLayer(c));
-            currentStopCircles = [];
             currentTripStopIds = [];
             
             const trip = await loadTripDetails(tripId);
             if (!trip || !trip.stopTimes) return;
             
-            // Odredi trenutno vrijeme
             const now = new Date();
             const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
             
-            // Nađi sljedeći index
             let nextIndex = -1;
             for (let i = 0; i < trip.stopTimes.length; i++) {
                 if (trip.stopTimes[i].arrivalTime > nowSeconds) {
@@ -1485,7 +1468,6 @@
                 const isNext = i === nextIndex;
                 const className = isNext ? 'route-stop-marker next-stop' : 'route-stop-marker';
                 
-                // Napravi ikonu
                 const icon = L.divIcon({
                     html: `<div class="${className}"></div>`,
                     className: '',
@@ -1493,10 +1475,7 @@
                     iconAnchor: isNext ? [9, 9] : [7, 7]
                 });
                 
-                const marker = L.marker([stopInfo.lat, stopInfo.lng], { icon })
-                    .addTo(map);
-                
-                // Klik na stanicu → popup s dolascima
+                const marker = L.marker([stopInfo.lat, stopInfo.lng], { icon }).addTo(map);
                 marker.on('click', () => showStopArrivals(stopId, stopInfo.name));
                 
                 currentStopMarkers.push(marker);
@@ -1542,7 +1521,6 @@
                 </li>`;
             }).join('');
             
-            // DODAJ OZNAKE STANICA NA RUTU
             await addStopMarkersOnRoute(tripId, v);
         }
 
@@ -1556,13 +1534,13 @@
         function updateVehicleMeta(v) {
             if (!v) return;
             const route = routes[v.routeId] || {};
-            const typeText = v.routeType === 0 ? '🚋 Tramvaj' : '🚌 Autobus';
+            const isTram = v.routeType === 0;
+            const typeText = isTram ? '🚋 Tramvaj' : '🚌 Autobus';
             const delay = formatDelay(v.delay || 0);
-            const vehicleInfo = vehicleDatabase[v.id] || {};
-            const model = vehicleInfo.model || 'Nepoznato';
-            const reg = vehicleInfo.reg || 'Nepoznato';
+            const vInfo = vehicleDatabase[v.id] || {};
+            const model = vInfo.model || 'Nepoznato';
             
-            document.getElementById('panelMeta').innerHTML = `
+            let html = `
                 <div class="vehicle-meta-row">
                     <span class="vehicle-meta-label">Tip:</span>
                     <span class="vehicle-meta-value">${typeText}</span>
@@ -1571,10 +1549,20 @@
                     <span class="vehicle-meta-label">Marka:</span>
                     <span class="vehicle-meta-value">${model}</span>
                 </div>
-                <div class="vehicle-meta-row">
-                    <span class="vehicle-meta-label">Registracija:</span>
-                    <span class="vehicle-meta-value">${reg}</span>
-                </div>
+            `;
+            
+            // SAMO ZA AUTOBUSE - registracija
+            if (!isTram) {
+                const reg = vInfo.reg || 'Nepoznato';
+                html += `
+                    <div class="vehicle-meta-row">
+                        <span class="vehicle-meta-label">Registracija:</span>
+                        <span class="vehicle-meta-value">${reg}</span>
+                    </div>
+                `;
+            }
+            
+            html += `
                 <div class="vehicle-meta-row">
                     <span class="vehicle-meta-label">Linija:</span>
                     <span class="vehicle-meta-value">${route.longName || '-'}</span>
@@ -1596,6 +1584,8 @@
                     <span class="vehicle-meta-value">${new Date(v.timestamp).toLocaleTimeString('hr-HR')}</span>
                 </div>
             `;
+            
+            document.getElementById('panelMeta').innerHTML = html;
         }
 
         function showRouteLoader(show) {
@@ -1623,8 +1613,6 @@
             }
             currentStopMarkers.forEach(m => map.removeLayer(m));
             currentStopMarkers = [];
-            currentStopCircles.forEach(c => map.removeLayer(c));
-            currentStopCircles = [];
             currentTripStopIds = [];
         }
 
@@ -1636,14 +1624,13 @@
         }
 
         // ============================================================
-        // STANICA - DOLASCI (klik na stanicu)
+        // STANICA - DOLASCI
         // ============================================================
         async function showStopArrivals(stopId, stopName) {
-            // Prikaži popup na karti
             const stopInfo = stopsByStopId[stopId];
             if (!stopInfo) return;
             
-            const popup = L.popup({
+            L.popup({
                 maxWidth: 360,
                 className: 'stop-arrivals-popup'
             })
@@ -1664,22 +1651,16 @@
             `)
             .openOn(map);
             
-            // Dohvati dolaske
             const arrivals = await calculateArrivalsForStop(stopId);
             
             const body = document.getElementById('stopPopupBody');
             if (!body) return;
             
             if (arrivals.length === 0) {
-                body.innerHTML = `
-                    <div class="stop-popup-empty">
-                        😔 Nema dolazaka u sljedećih 60 minuta
-                    </div>
-                `;
+                body.innerHTML = `<div class="stop-popup-empty">😔 Nema dolazaka u sljedećih 60 minuta</div>`;
                 return;
             }
             
-            // Prikaži 5 najbližih
             const top5 = arrivals.slice(0, 5);
             
             body.innerHTML = `
@@ -1709,14 +1690,12 @@
             const now = new Date();
             const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
             
-            // Provjeri cache
             const cacheKey = targetStopId;
             const cached = STOPS_ARRIVALS_CACHE[cacheKey];
             if (cached && (Date.now() - cached.timestamp) < STOPS_ARRIVALS_TTL) {
                 return cached.arrivals;
             }
             
-            // Iteriraj kroz sve aktivne vožnje
             const vehicleData = Object.values(vehicles);
             
             const results = await Promise.all(
@@ -1726,49 +1705,34 @@
                         const trip = await loadTripDetails(vd.tripId);
                         if (!trip || !trip.stopTimes) return null;
                         
-                        // Nađi stanicu u tripu
                         const stopIndex = trip.stopTimes.findIndex(s => s.stopId === targetStopId);
                         if (stopIndex === -1) return null;
                         
                         const stopTime = trip.stopTimes[stopIndex];
-                        
-                        // Izračunaj vrijeme dolaska (u sekundama od ponoći)
                         const arrivalSeconds = stopTime.arrivalTime + (stopTime.arrivalDelay || 0);
-                        
-                        // Razlika od sada
                         let diffSeconds = arrivalSeconds - nowSeconds;
                         
-                        // Ako je prošlo više od 5 min, ignoriraj (jer je vozilo već prošlo)
                         if (diffSeconds < -300) return null;
-                        
-                        // Ako je više od 60 min u budućnosti, ignoriraj
                         if (diffSeconds > 3600) return null;
                         
-                        // Zaokruži minute
                         const minutesAway = Math.round(diffSeconds / 60);
                         
                         return {
                             line: vd.line,
                             dest: vd.dest,
-                            routeType: vd.routeType,
                             isTram: vd.routeType === 0,
                             time: formatTime(arrivalSeconds),
                             minutesAway: minutesAway,
-                            secondsAway: diffSeconds,
-                            vehicleId: vd.id
+                            secondsAway: diffSeconds
                         };
-                    } catch (e) {
-                        return null;
-                    }
+                    } catch (e) { return null; }
                 })
             );
             
-            // Filtriraj null i sortiraj po vremenu
             const arrivals = results
                 .filter(r => r !== null)
                 .sort((a, b) => a.secondsAway - b.secondsAway);
             
-            // Spremi u cache
             STOPS_ARRIVALS_CACHE[cacheKey] = {
                 timestamp: Date.now(),
                 arrivals: arrivals
@@ -1866,7 +1830,7 @@
         }
 
         // ============================================================
-        // POVIJESNI PREGLED - SAMO PRIKAZ (bez brisanja)
+        // POVIJEST
         // ============================================================
         function openHistory() {
             document.getElementById('sideMenu').classList.remove('visible');
@@ -1986,7 +1950,7 @@
             main.innerHTML = `
                 <h3>GBR ${gbr}</h3>
                 <div class="vehicle-info">
-                    <strong>${item.model || 'Nepoznato'}</strong> · ${item.reg || ''}<br>
+                    <strong>${item.model || 'Nepoznato'}</strong>${item.reg ? ` · ${item.reg}` : ''}<br>
                     Ukupno vožnji: <strong>${totalRides}</strong> · 
                     ${isTram ? '🚋 Tramvaj' : '🚌 Autobus'}
                 </div>
@@ -1995,7 +1959,7 @@
         }
 
         // ============================================================
-        // INICIJALIZACIJA
+        // INIT
         // ============================================================
         async function init() {
             await loadRoutes();
