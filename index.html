@@ -722,4 +722,1087 @@
             }
             console.log(`✅ Baza vozila: ${Object.keys(vehicleDatabase).length} ukupno`);
         }
-        addTramsToDatabase();
+        addTramsToDatabase();        // ============================================================
+        // MAPA
+        // ============================================================
+        const map = L.map('map', {
+            center: [45.815, 15.982],
+            zoom: 13,
+            zoomControl: false
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        let routes = {};
+        let stops = [];
+        let stopsByStopId = {};
+        let vehicles = {};
+        let activeVehicleId = null;
+        let highlightedId = null;
+        let currentRoutePolyline = null;
+        let currentRouteShadow = null;
+        let currentStopMarkers = [];
+        let selectedHistoryVehicle = null;
+        let selectedVR = null;
+        let currentTripStopIds = [];
+
+        const shapeCache = {};
+        const tripCache = {};
+        const vrDetailsCache = {};
+
+        // ============================================================
+        // POVIJEST VOŽNJI
+        // ============================================================
+        function loadRides() {
+            try {
+                const data = localStorage.getItem(HISTORY_KEY);
+                if (data) return JSON.parse(data);
+            } catch(e) {}
+            return {};
+        }
+
+        function saveRides(rides) {
+            try {
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(rides));
+            } catch(e) {}
+        }
+
+        let ridesHistory = loadRides();
+        let lastRideKey = {};
+
+        function getRideKey(v) {
+            const date = new Date(v.timestamp);
+            const dateStr = date.toISOString().split('T')[0];
+            const timeStr = (v.departureTime || '').substring(0, 5);
+            return `${dateStr}|${timeStr}|${v.line}|${v.dest}`;
+        }
+
+        function recordRide(v) {
+            const gbr = v.id;
+            const key = getRideKey(v);
+
+            if (lastRideKey[gbr] === key) return false;
+            
+            if (ridesHistory[gbr]) {
+                const recent = ridesHistory[gbr].rides.slice(-50);
+                const parts = key.split('|');
+                if (recent.some(r => 
+                    r.date === parts[0] && 
+                    r.time === parts[1] && 
+                    r.line === v.line && 
+                    r.dest === v.dest
+                )) {
+                    lastRideKey[gbr] = key;
+                    return false;
+                }
+            }
+
+            const date = new Date(v.timestamp);
+            const dateStr = date.toISOString().split('T')[0];
+            const timeStr = (v.departureTime || '').substring(0, 5);
+            const vInfo = vehicleDatabase[gbr] || {};
+
+            if (!ridesHistory[gbr]) {
+                ridesHistory[gbr] = {
+                    gbr: gbr,
+                    model: vInfo.model || 'Nepoznato',
+                    reg: vInfo.reg || '',
+                    type: v.routeType,
+                    rides: []
+                };
+            } else {
+                ridesHistory[gbr].model = vInfo.model || ridesHistory[gbr].model;
+                ridesHistory[gbr].reg = vInfo.reg || ridesHistory[gbr].reg;
+            }
+
+            ridesHistory[gbr].rides.push({
+                date: dateStr,
+                time: timeStr,
+                line: v.line,
+                dest: v.dest,
+                routeId: v.routeId,
+                tripId: v.tripId,
+                timestamp: v.timestamp
+            });
+
+            if (ridesHistory[gbr].rides.length > 500) {
+                ridesHistory[gbr].rides = ridesHistory[gbr].rides.slice(-500);
+            }
+
+            lastRideKey[gbr] = key;
+            return true;
+        }
+
+        // ============================================================
+        // POMOĆNE FUNKCIJE
+        // ============================================================
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600) % 24;
+            const m = Math.floor((seconds % 3600) / 60);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function formatDelay(delaySeconds) {
+            if (delaySeconds === 0) return { text: 'Na vrijeme', class: 'ontime' };
+            const min = Math.round(delaySeconds / 60);
+            if (min < 0) return { text: `${min} min`, class: 'early' };
+            return { text: `+${min} min`, class: 'late' };
+        }
+
+        // Format VR iz blockId-a (npr. "1701" → "17/01")
+        function formatVR(blockId, line) {
+            if (!blockId) return '-';
+            const str = String(blockId);
+            const vrNum = str.slice(-2);
+            const inferredLine = str.slice(0, -2);
+            // Ako imamo line iz API-ja, koristi njega
+            const displayLine = line || inferredLine || '?';
+            return `${displayLine}/${vrNum}`;
+        }
+
+        function getTodayString() {
+            const d = new Date();
+            return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        function createVehicleIcon(line, type, bearing, isHighlighted) {
+            const isTram = type === 0;
+            const className = isTram ? 'tram' : 'bus';
+            const highlight = isHighlighted ? 'highlighted' : '';
+            
+            let arrowHtml = '';
+            if (bearing !== null && bearing !== undefined && bearing !== 0) {
+                arrowHtml = `<div class="bus-arrow" style="transform: translateX(-50%) rotate(${bearing}deg);">▲</div>`;
+            }
+
+            return L.divIcon({
+                html: `
+                    <div style="position: relative;">
+                        ${arrowHtml}
+                        <div class="bus-icon ${className} ${highlight}">${line}</div>
+                    </div>
+                `,
+                className: '',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+        }
+
+        // ============================================================
+        // DOHVATI PODATKE
+        // ============================================================
+        async function loadRoutes() {
+            try {
+                const resp = await fetch(`${API_BASE}/routes`);
+                const data = await resp.json();
+                data.forEach(r => {
+                    routes[r.routeId] = {
+                        shortName: r.routeShortName,
+                        longName: r.routeLongName,
+                        type: r.routeType
+                    };
+                });
+            } catch (e) { console.error('Greška routes:', e); }
+        }
+
+        async function loadStops() {
+            try {
+                const resp = await fetch(`${API_BASE}/stops`);
+                const data = await resp.json();
+                stops = data.features || [];
+                stops.forEach(s => {
+                    if (s.geometry && s.geometry.coordinates) {
+                        const [lng, lat] = s.geometry.coordinates;
+                        const id = s.properties.id;
+                        stopsByStopId[id] = {
+                            name: s.properties.name,
+                            lat: lat,
+                            lng: lng,
+                            id: id
+                        };
+                    }
+                });
+                console.log(`✅ Stanice: ${stops.length}`);
+            } catch (e) { console.error('Greška stops:', e); }
+        }
+
+        async function loadVehicles() {
+            try {
+                const resp = await fetch(`${API_BASE}/vehicles/locations`);
+                const data = await resp.json();
+                if (!data.features) return;
+
+                const currentIds = new Set();
+                let newRidesCount = 0;
+
+                data.features.forEach(f => {
+                    const [lng, lat] = f.geometry.coordinates;
+                    const p = f.properties;
+                    
+                    if (!p.vehicleId || p.vehicleId === 'XXX') return;
+
+                    currentIds.add(p.vehicleId);
+
+                    const v = {
+                        id: p.vehicleId,
+                        lat, lng,
+                        line: p.routeShortName,
+                        dest: p.tripHeadsign,
+                        routeId: p.routeId,
+                        routeType: p.routeType,
+                        bearing: p.bearing,
+                        delay: p.delay,
+                        realTime: p.realTime,
+                        timestamp: p.timestamp,
+                        departureTime: p.departureTime,
+                        tripId: p.tripId,
+                        blockId: p.blockId  // VR!
+                    };
+
+                    if (recordRide(v)) newRidesCount++;
+
+                    if (vehicles[p.vehicleId]) {
+                        vehicles[p.vehicleId].marker.setLatLng([lat, lng]);
+                        vehicles[p.vehicleId].marker.setIcon(
+                            createVehicleIcon(p.routeShortName, p.routeType, p.bearing, p.vehicleId === highlightedId)
+                        );
+                        vehicles[p.vehicleId].data = v;
+                    } else {
+                        const marker = L.marker([lat, lng], {
+                            icon: createVehicleIcon(p.routeShortName, p.routeType, p.bearing, p.vehicleId === highlightedId)
+                        }).addTo(map);
+
+                        marker.on('click', () => showVehicleDetails(v));
+
+                        vehicles[p.vehicleId] = { marker, data: v };
+                    }
+                });
+
+                for (const id in vehicles) {
+                    if (!currentIds.has(id)) {
+                        map.removeLayer(vehicles[id].marker);
+                        delete vehicles[id];
+                    }
+                }
+
+                if (newRidesCount > 0) saveRides(ridesHistory);
+
+                document.getElementById('statsText').innerHTML = 
+                    `${new Date().toLocaleTimeString('hr-HR')} | ${Object.keys(vehicles).length} vozila`;
+
+                if (activeVehicleId && vehicles[activeVehicleId]) {
+                    updateVehicleHeader(vehicles[activeVehicleId].data);
+                }
+
+            } catch (e) {
+                console.error('Greška vehicles:', e);
+                document.getElementById('statsText').innerHTML = 'Greška';
+            }
+        }
+
+        async function loadTripDetails(tripId) {
+            if (tripCache[tripId]) return tripCache[tripId];
+            try {
+                const resp = await fetch(`${API_BASE}/trips/${tripId}`);
+                const data = await resp.json();
+                tripCache[tripId] = data;
+                return data;
+            } catch (e) { return null; }
+        }
+
+        async function loadTripShape(tripId) {
+            if (shapeCache[tripId]) return shapeCache[tripId];
+            try {
+                const resp = await fetch(`${API_BASE}/trips/${tripId}/shape`);
+                const data = await resp.json();
+                shapeCache[tripId] = data;
+                return data;
+            } catch (e) { return null; }
+        }
+
+        // ============================================================
+        // PRIKAŽI VOZILO
+        // ============================================================
+        async function showVehicleDetails(v) {
+            activeVehicleId = v.id;
+            highlightedId = v.id;
+            
+            Object.values(vehicles).forEach(veh => {
+                if (veh.data.id !== v.id) {
+                    veh.marker.setIcon(createVehicleIcon(veh.data.line, veh.data.routeType, veh.data.bearing, false));
+                    veh.marker.setZIndexOffset(0);
+                }
+            });
+            
+            if (vehicles[v.id]) {
+                vehicles[v.id].marker.setIcon(createVehicleIcon(v.line, v.routeType, v.bearing, true));
+                vehicles[v.id].marker.setZIndexOffset(1000);
+            }
+            
+            document.getElementById('vehiclePanel').classList.add('visible');
+            
+            // Dohvati trip detalje za blockId (VR)
+            const trip = await loadTripDetails(v.tripId);
+            const blockId = trip?.blockId || v.blockId;
+            v.blockId = blockId;
+            
+            updateVehicleHeader(v);
+            updateVehicleMeta(v);
+            
+            map.flyTo([v.lat, v.lng], 15, { duration: 0.8 });
+            
+            showRouteLoader(true);
+            await drawRoute(v.tripId);
+            await loadAndShowStops(v.tripId, v);
+            showRouteLoader(false);
+        }
+
+        async function drawRoute(tripId) {
+            if (currentRoutePolyline) {
+                map.removeLayer(currentRoutePolyline);
+                currentRoutePolyline = null;
+            }
+            if (currentRouteShadow) {
+                map.removeLayer(currentRouteShadow);
+                currentRouteShadow = null;
+            }
+            
+            const shape = await loadTripShape(tripId);
+            if (!shape || !shape.geometry) return;
+            
+            const latlngs = shape.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+            
+            currentRouteShadow = L.polyline(latlngs, { 
+                color: '#4c1d95', weight: 8, opacity: 0.3, lineJoin: 'round' 
+            }).addTo(map);
+            
+            currentRoutePolyline = L.polyline(latlngs, {
+                color: '#7c3aed', weight: 5, opacity: 0.9, lineJoin: 'round', lineCap: 'round'
+            }).addTo(map);
+            
+            map.fitBounds(currentRoutePolyline.getBounds(), { padding: [50, 50] });
+        }
+
+        async function addStopMarkersOnRoute(tripId, v) {
+            currentStopMarkers.forEach(m => map.removeLayer(m));
+            currentStopMarkers = [];
+            currentTripStopIds = [];
+            
+            const trip = await loadTripDetails(tripId);
+            if (!trip || !trip.stopTimes) return;
+            
+            const now = new Date();
+            const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            
+            let nextIndex = -1;
+            for (let i = 0; i < trip.stopTimes.length; i++) {
+                if (trip.stopTimes[i].arrivalTime > nowSeconds) {
+                    nextIndex = i;
+                    break;
+                }
+            }
+            
+            trip.stopTimes.forEach((stop, i) => {
+                const stopId = stop.stopId;
+                currentTripStopIds.push(stopId);
+                
+                const stopInfo = stopsByStopId[stopId];
+                if (!stopInfo) return;
+                
+                const isNext = i === nextIndex;
+                const className = isNext ? 'route-stop-marker next-stop' : 'route-stop-marker';
+                
+                const icon = L.divIcon({
+                    html: `<div class="${className}"></div>`,
+                    className: '',
+                    iconSize: isNext ? [18, 18] : [14, 14],
+                    iconAnchor: isNext ? [9, 9] : [7, 7]
+                });
+                
+                const marker = L.marker([stopInfo.lat, stopInfo.lng], { icon }).addTo(map);
+                marker.on('click', () => showStopArrivals(stopId, stopInfo.name));
+                
+                currentStopMarkers.push(marker);
+            });
+        }
+
+        async function loadAndShowStops(tripId, v) {
+            const stopsList = document.getElementById('panelStops');
+            stopsList.innerHTML = '<li style="color:#6b7280;text-align:center;padding:20px;">Učitavanje stanica...</li>';
+            
+            const trip = await loadTripDetails(tripId);
+            if (!trip || !trip.stopTimes) {
+                stopsList.innerHTML = '<li style="color:#dc2626;text-align:center;padding:20px;">Nema podataka</li>';
+                return;
+            }
+            
+            const now = new Date();
+            const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            
+            let nextIndex = -1;
+            for (let i = 0; i < trip.stopTimes.length; i++) {
+                if (trip.stopTimes[i].arrivalTime > nowSeconds) {
+                    nextIndex = i; break;
+                }
+            }
+            
+            stopsList.innerHTML = trip.stopTimes.map((stop, i) => {
+                const time = formatTime(stop.arrivalTime);
+                const delay = formatDelay(stop.arrivalDelay || 0);
+                const isPassed = i < nextIndex;
+                const isNext = i === nextIndex;
+                
+                const classes = ['stop-item', isPassed ? 'passed' : '', isNext ? 'next' : ''].filter(Boolean).join(' ');
+                const delayHtml = stop.realTime 
+                    ? `<span class="stop-delay ${delay.class}">${delay.text}</span>` : '';
+                
+                return `<li class="${classes}" onclick="showStopArrivals('${stop.stopId}', '${stop.stopName.replace(/'/g, "\\'")}')" style="cursor:pointer;">
+                    <span class="stop-time">${time}</span>
+                    <span class="stop-name">${stop.stopName}</span>
+                    ${delayHtml}
+                </li>`;
+            }).join('');
+            
+            await addStopMarkersOnRoute(tripId, v);
+        }
+
+        function updateVehicleHeader(v) {
+            if (!v) return;
+            const vInfo = vehicleDatabase[v.id] || {};
+            const model = vInfo.model || 'Nepoznato';
+            
+            document.getElementById('panelLine').textContent = v.line;
+            document.getElementById('panelDest').textContent = `→ ${v.dest}`;
+            document.getElementById('panelVehicleId').textContent = `Vozilo: ${v.id} · ${model}`;
+            
+            // VR ispod
+            if (v.blockId) {
+                document.getElementById('panelVR').textContent = `Vozni red: ${v.blockId}`;
+            } else {
+                document.getElementById('panelVR').textContent = '';
+            }
+        }
+
+        function updateVehicleMeta(v) {
+            if (!v) return;
+            const route = routes[v.routeId] || {};
+            const isTram = v.routeType === 0;
+            const typeText = isTram ? '🚋 Tramvaj' : '🚌 Autobus';
+            const delay = formatDelay(v.delay || 0);
+            const vInfo = vehicleDatabase[v.id] || {};
+            const model = vInfo.model || 'Nepoznato';
+            
+            let html = `
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Tip:</span>
+                    <span class="vehicle-meta-value">${typeText}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Marka:</span>
+                    <span class="vehicle-meta-value">${model}</span>
+                </div>
+            `;
+            
+            if (!isTram) {
+                const reg = vInfo.reg || 'Nepoznato';
+                html += `
+                    <div class="vehicle-meta-row">
+                        <span class="vehicle-meta-label">Registracija:</span>
+                        <span class="vehicle-meta-value">${reg}</span>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Linija:</span>
+                    <span class="vehicle-meta-value">${route.longName || '-'}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Smjer:</span>
+                    <span class="vehicle-meta-value">${v.dest}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Vozni red:</span>
+                    <span class="vehicle-meta-value">${v.blockId || '-'}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Polazak:</span>
+                    <span class="vehicle-meta-value">${v.departureTime || '-'}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Kašnjenje:</span>
+                    <span class="vehicle-meta-value stop-delay ${delay.class}">${delay.text}</span>
+                </div>
+                <div class="vehicle-meta-row">
+                    <span class="vehicle-meta-label">Ažurirano:</span>
+                    <span class="vehicle-meta-value">${new Date(v.timestamp).toLocaleTimeString('hr-HR')}</span>
+                </div>
+            `;
+            
+            document.getElementById('panelMeta').innerHTML = html;
+        }
+
+        function showRouteLoader(show) {
+            document.getElementById('routeLoader').classList.toggle('visible', show);
+        }
+
+        function closeVehiclePanel() {
+            document.getElementById('vehiclePanel').classList.remove('visible');
+            activeVehicleId = null;
+            
+            if (highlightedId && vehicles[highlightedId]) {
+                const v = vehicles[highlightedId].data;
+                vehicles[highlightedId].marker.setIcon(createVehicleIcon(v.line, v.routeType, v.bearing, false));
+                vehicles[highlightedId].marker.setZIndexOffset(0);
+            }
+            highlightedId = null;
+            
+            if (currentRoutePolyline) {
+                map.removeLayer(currentRoutePolyline);
+                currentRoutePolyline = null;
+            }
+            if (currentRouteShadow) {
+                map.removeLayer(currentRouteShadow);
+                currentRouteShadow = null;
+            }
+            currentStopMarkers.forEach(m => map.removeLayer(m));
+            currentStopMarkers = [];
+            currentTripStopIds = [];
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // ============================================================
+        // STANICA - DOLASCI
+        // ============================================================
+        async function showStopArrivals(stopId, stopName) {
+            const stopInfo = stopsByStopId[stopId];
+            if (!stopInfo) return;
+            
+            L.popup({
+                maxWidth: 360,
+                className: 'stop-arrivals-popup'
+            })
+            .setLatLng([stopInfo.lat, stopInfo.lng])
+            .setContent(`
+                <div class="stop-popup" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;min-width:280px;max-width:340px;">
+                    <div class="stop-popup-header" style="background:linear-gradient(135deg,#4c1d95,#7c3aed);color:white;padding:12px 16px;margin:-14px -20px 12px -20px;border-radius:12px 12px 0 0;">
+                        <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">🚏 ${stopName}</h3>
+                        <small style="font-size:11px;opacity:0.85;">Sljedeći dolasci</small>
+                    </div>
+                    <div id="stopPopupBody">
+                        <div style="text-align:center;padding:20px;color:#7c3aed;font-size:13px;">
+                            <span style="display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;vertical-align:middle;"></span>
+                            Učitavanje dolazaka...
+                        </div>
+                    </div>
+                </div>
+            `)
+            .openOn(map);
+            
+            const arrivals = await calculateArrivalsForStop(stopId);
+            
+            const body = document.getElementById('stopPopupBody');
+            if (!body) return;
+            
+            if (arrivals.length === 0) {
+                body.innerHTML = `<div style="text-align:center;padding:20px;color:#9ca3af;font-size:13px;">😔 Nema dolazaka u sljedećih 60 minuta</div>`;
+                return;
+            }
+            
+            const top5 = arrivals.slice(0, 5);
+            
+            body.innerHTML = `
+                <ul style="list-style:none;max-height:300px;overflow-y:auto;">
+                    ${top5.map(a => {
+                        const isNow = a.minutesAway <= 0;
+                        const isSoon = a.minutesAway <= 3;
+                        const color = isNow ? '#16a34a' : (isSoon ? '#ea580c' : '#4c1d95');
+                        const timeText = isNow ? 'SADA' : `${a.minutesAway} min`;
+                        
+                        return `
+                            <li style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #f3f4f6;font-size:13px;">
+                                <span style="padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px;min-width:42px;text-align:center;color:white;background:${a.isTram ? '#2563eb' : '#ea580c'};">${a.line}</span>
+                                <div style="flex:1;">
+                                    <strong style="display:block;font-size:12px;color:#1f2937;">→ ${a.dest}</strong>
+                                    <small style="font-size:10px;color:#6b7280;">${a.time}</small>
+                                </div>
+                                <span style="font-weight:700;color:${color};font-size:14px;min-width:50px;text-align:right;">${timeText}</span>
+                            </li>
+                        `;
+                    }).join('')}
+                </ul>
+            `;
+        }
+
+        async function calculateArrivalsForStop(targetStopId) {
+            const now = new Date();
+            const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            
+            const cacheKey = targetStopId;
+            const cached = STOPS_ARRIVALS_CACHE[cacheKey];
+            if (cached && (Date.now() - cached.timestamp) < STOPS_ARRIVALS_TTL) {
+                return cached.arrivals;
+            }
+            
+            const vehicleData = Object.values(vehicles);
+            
+            const results = await Promise.all(
+                vehicleData.map(async (v) => {
+                    const vd = v.data;
+                    try {
+                        const trip = await loadTripDetails(vd.tripId);
+                        if (!trip || !trip.stopTimes) return null;
+                        
+                        const stopIndex = trip.stopTimes.findIndex(s => s.stopId === targetStopId);
+                        if (stopIndex === -1) return null;
+                        
+                        const stopTime = trip.stopTimes[stopIndex];
+                        const arrivalSeconds = stopTime.arrivalTime + (stopTime.arrivalDelay || 0);
+                        let diffSeconds = arrivalSeconds - nowSeconds;
+                        
+                        if (diffSeconds < -300) return null;
+                        if (diffSeconds > 3600) return null;
+                        
+                        const minutesAway = Math.round(diffSeconds / 60);
+                        
+                        return {
+                            line: vd.line,
+                            dest: vd.dest,
+                            isTram: vd.routeType === 0,
+                            time: formatTime(arrivalSeconds),
+                            minutesAway: minutesAway,
+                            secondsAway: diffSeconds
+                        };
+                    } catch (e) { return null; }
+                })
+            );
+            
+            const arrivals = results
+                .filter(r => r !== null)
+                .sort((a, b) => a.secondsAway - b.secondsAway);
+            
+            STOPS_ARRIVALS_CACHE[cacheKey] = {
+                timestamp: Date.now(),
+                arrivals: arrivals
+            };
+            
+            return arrivals;
+        }
+
+        // ============================================================
+        // VOZNI REDOVI (VR)
+        // ============================================================
+        async function loadVRList(forceRefresh = false) {
+            const list = document.getElementById('vrList');
+            list.innerHTML = '<div class="vr-loading"><span class="spinner"></span> Učitavanje...</div>';
+            
+            // Cache check
+            if (!forceRefresh && VR_LIST_CACHE.data && (Date.now() - VR_LIST_CACHE.timestamp) < VR_LIST_CACHE.ttl) {
+                renderVRList();
+                return;
+            }
+            
+            try {
+                const date = getTodayString();
+                const resp = await fetch(`/proxy/vrs?date=${date}`);
+                const data = await resp.json();
+                
+                // data je array: [["101", "1", ["10349"], false], ...]
+                // Konvertiraj u objekte
+                const vrArray = data.map(item => ({
+                    vr: item[0],
+                    line: item[1],
+                    vehicles: item[2] || [],
+                    live: item[3] || false
+                }));
+                
+                VR_LIST_CACHE.data = vrArray;
+                VR_LIST_CACHE.timestamp = Date.now();
+                
+                console.log(`✅ Učitano ${vrArray.length} VR-ova`);
+                renderVRList();
+            } catch (e) {
+                console.error('Greška VR list:', e);
+                list.innerHTML = '<div style="padding:20px;text-align:center;color:#dc2626;font-size:13px;">❌ Greška pri učitavanju</div>';
+            }
+        }
+
+        function renderVRList() {
+            const search = document.getElementById('vrSearch').value.trim();
+            const list = document.getElementById('vrList');
+            
+            if (!VR_LIST_CACHE.data) {
+                list.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Nema podataka</div>';
+                return;
+            }
+            
+            let items = VR_LIST_CACHE.data;
+            
+            if (search) {
+                items = items.filter(item => 
+                    item.vr.includes(search) || 
+                    item.line.includes(search)
+                );
+            }
+            
+            // Sortiraj po VR (numerički)
+            items = items.slice().sort((a, b) => Number(a.vr) - Number(b.vr));
+            
+            if (items.length === 0) {
+                list.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Nema rezultata</div>';
+                return;
+            }
+            
+            list.innerHTML = items.map(item => {
+                const isSelected = selectedVR === item.vr;
+                return `
+                    <div class="vr-item ${isSelected ? 'active' : ''}" onclick="selectVR('${item.vr}')">
+                        <span class="vr-badge">${item.vr}</span>
+                        <span class="vr-line-info">Linija ${item.line}</span>
+                        ${item.live ? '<span class="vr-live-dot"></span>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function selectVR(vr) {
+            selectedVR = vr;
+            renderVRList();
+            await renderVRDetails(vr);
+        }
+
+        async function renderVRDetails(vr) {
+            const main = document.getElementById('vrMain');
+            main.innerHTML = '<div class="vr-loading"><span class="spinner"></span> Učitavanje polazaka...</div>';
+            
+            try {
+                const date = getTodayString();
+                let data;
+                
+                // Cache check
+                const cacheKey = `${vr}_${date}`;
+                if (vrDetailsCache[cacheKey]) {
+                    data = vrDetailsCache[cacheKey];
+                } else {
+                    const resp = await fetch(`/proxy/vr/${vr}?date=${date}`);
+                    data = await resp.json();
+                    vrDetailsCache[cacheKey] = data;
+                }
+                
+                if (!data || !data.trips) {
+                    main.innerHTML = '<div class="vr-empty"><div class="icon">📭</div><div>Nema podataka za VR ' + vr + '</div></div>';
+                    return;
+                }
+                
+                // Nađi liniju iz prvog tripa
+                const firstTrip = data.trips[0];
+                const line = firstTrip ? firstTrip.r : '?';
+                const isTram = firstTrip && firstTrip.t === 'tram';
+                
+                const now = new Date();
+                const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+                const curIndex = data.cur || -1;
+                
+                main.innerHTML = `
+                    <h3>
+                        VR ${vr}
+                        <span style="font-size:14px;font-weight:500;color:#6b7280;">· Linija ${line}</span>
+                    </h3>
+                    <div class="vr-info">
+                        <strong>${data.trips.length}</strong> polazaka
+                        ${data.vm ? ` · <strong>${data.vm}</strong>` : ''}
+                        ${data.veh && data.veh.length ? ` · Vozila: <strong>${data.veh.join(', ')}</strong>` : ''}
+                    </div>
+                    <ul class="vr-departures">
+                        ${data.trips.map((trip, i) => {
+                            const time = formatTime(trip.s);
+                            const isCurrent = i === curIndex;
+                            
+                            let statusHtml = '';
+                            if (trip.dl === null || trip.dl === undefined) {
+                                statusHtml = '<span class="vr-departure-status scheduled">Predviđeno</span>';
+                            } else if (Math.abs(trip.dl) < 60) {
+                                statusHtml = '<span class="vr-departure-status ontime">Na vrijeme</span>';
+                            } else if (trip.dl > 0) {
+                                statusHtml = `<span class="vr-departure-status late">Kasni ${Math.round(trip.dl/60)} min</span>`;
+                            } else {
+                                statusHtml = `<span class="vr-departure-status early">Rani ${Math.round(Math.abs(trip.dl)/60)} min</span>`;
+                            }
+                            
+                            return `
+                                <li class="vr-departure ${isCurrent ? 'current' : ''}">
+                                    <span class="vr-departure-time">${time}</span>
+                                    <span class="vr-departure-line ${isTram ? 'tram' : 'bus'}">${trip.r}</span>
+                                    <span class="vr-departure-dest">${trip.h || 'Nepoznato'}</span>
+                                    ${statusHtml}
+                                </li>
+                            `;
+                        }).join('')}
+                    </ul>
+                `;
+            } catch (e) {
+                console.error('Greška VR details:', e);
+                main.innerHTML = '<div class="vr-empty"><div class="icon">❌</div><div>Greška pri učitavanju</div></div>';
+            }
+        }
+
+        function openVR() {
+            document.getElementById('sideMenu').classList.remove('visible');
+            document.getElementById('vrPanel').classList.add('visible');
+            loadVRList();
+        }
+
+        function closeVR() {
+            document.getElementById('vrPanel').classList.remove('visible');
+            selectedVR = null;
+        }
+
+        // ============================================================
+        // PRETRAGA
+        // ============================================================
+        function setupSearch() {
+            const input = document.getElementById('searchInput');
+            const results = document.getElementById('searchResults');
+            
+            input.addEventListener('input', () => {
+                const query = input.value.toLowerCase().trim();
+                if (!query) { results.classList.remove('visible'); return; }
+                
+                const matches = [];
+                Object.values(vehicles).forEach(v => {
+                    const d = v.data;
+                    const vInfo = vehicleDatabase[d.id] || {};
+                    if (d.id.toLowerCase().includes(query) || 
+                        d.line.toLowerCase().includes(query) || 
+                        d.dest.toLowerCase().includes(query) ||
+                        (vInfo.model || '').toLowerCase().includes(query) ||
+                        (vInfo.reg || '').toLowerCase().includes(query)) {
+                        matches.push(d);
+                    }
+                });
+                
+                const limited = matches.slice(0, 15);
+                
+                if (limited.length === 0) {
+                    results.innerHTML = `<div class="search-result-item" style="color:#999;justify-content:center;">Nema rezultata</div>`;
+                    results.classList.add('visible');
+                    return;
+                }
+                
+                results.innerHTML = limited.map(m => {
+                    const vInfo = vehicleDatabase[m.id] || {};
+                    return `
+                        <div class="search-result-item" onclick="selectSearchResult('${m.id}')">
+                            <span class="search-result-badge ${m.routeType === 0 ? '' : 'bus'}">${m.line}</span>
+                            <div class="search-result-info">
+                                <div><strong>GBR ${m.id}</strong></div>
+                                <small>${vInfo.model || ''} → ${m.dest}</small>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                results.classList.add('visible');
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-box')) results.classList.remove('visible');
+            });
+        }
+
+        function selectSearchResult(vehicleId) {
+            const v = vehicles[vehicleId];
+            if (v) {
+                showVehicleDetails(v.data);
+                document.getElementById('searchInput').value = '';
+                document.getElementById('searchResults').classList.remove('visible');
+            }
+        }
+
+        // ============================================================
+        // MENI
+        // ============================================================
+        function toggleMenu() {
+            document.getElementById('sideMenu').classList.toggle('visible');
+        }
+
+        function showAll() {
+            Object.values(vehicles).forEach(v => v.marker.setOpacity(1));
+            document.getElementById('sideMenu').classList.remove('visible');
+        }
+
+        function showAllTrams() {
+            Object.values(vehicles).forEach(v => {
+                v.marker.setOpacity(v.data.routeType === 0 ? 1 : 0.15);
+            });
+            document.getElementById('sideMenu').classList.remove('visible');
+        }
+
+        function showAllBuses() {
+            Object.values(vehicles).forEach(v => {
+                v.marker.setOpacity(v.data.routeType === 3 ? 1 : 0.15);
+            });
+            document.getElementById('sideMenu').classList.remove('visible');
+        }
+
+        // ============================================================
+        // POVIJEST
+        // ============================================================
+        function openHistory() {
+            document.getElementById('sideMenu').classList.remove('visible');
+            document.getElementById('historyPanel').classList.add('visible');
+            renderVehicleList();
+        }
+
+        function closeHistory() {
+            document.getElementById('historyPanel').classList.remove('visible');
+            selectedHistoryVehicle = null;
+        }
+
+        function renderVehicleList() {
+            const search = document.getElementById('historySearch').value.toLowerCase().trim();
+            const list = document.getElementById('historyVehicleList');
+            
+            let items = Object.values(ridesHistory);
+            
+            if (search) {
+                items = items.filter(item => {
+                    const model = (item.model || '').toLowerCase();
+                    const reg = (item.reg || '').toLowerCase();
+                    return item.gbr.toLowerCase().includes(search) ||
+                           model.includes(search) ||
+                           reg.includes(search);
+                });
+            }
+            
+            items.sort((a, b) => Number(a.gbr) - Number(b.gbr));
+            
+            if (items.length === 0) {
+                list.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Nema vozila</div>';
+                return;
+            }
+            
+            list.innerHTML = items.map(item => {
+                const isActive = vehicles[item.gbr] ? true : false;
+                const isSelected = selectedHistoryVehicle === item.gbr;
+                const totalRides = item.rides ? item.rides.length : 0;
+                
+                return `
+                    <div class="history-vehicle-item ${isSelected ? 'active' : ''}" onclick="selectHistoryVehicle('${item.gbr}')">
+                        <span class="history-vehicle-gbr">${item.gbr}</span>
+                        <span class="history-vehicle-model">
+                            ${item.model || 'Nepoznato'}
+                            ${isActive ? '🟢' : ''}
+                            <br><small style="font-size:10px;opacity:0.7;">${totalRides} vožnji</small>
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectHistoryVehicle(gbr) {
+            selectedHistoryVehicle = gbr;
+            renderVehicleList();
+            renderVehicleHistory(gbr);
+        }
+
+        function renderVehicleHistory(gbr) {
+            const main = document.getElementById('historyMain');
+            const item = ridesHistory[gbr];
+            
+            if (!item) {
+                main.innerHTML = `
+                    <div class="history-empty-state">
+                        <div class="icon">📭</div>
+                        <div>Nema podataka za vozilo ${gbr}</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const isTram = item.type === 0;
+            const totalRides = item.rides ? item.rides.length : 0;
+            
+            const byDay = {};
+            (item.rides || []).forEach(ride => {
+                if (!byDay[ride.date]) byDay[ride.date] = [];
+                byDay[ride.date].push(ride);
+            });
+            
+            const sortedDays = Object.keys(byDay).sort((a, b) => b.localeCompare(a));
+            
+            let ridesHtml = '';
+            
+            if (sortedDays.length === 0) {
+                ridesHtml = '<div class="history-empty-state">📭 Još nema zabilježenih vožnji</div>';
+            } else {
+                ridesHtml = sortedDays.map(day => {
+                    const rides = byDay[day];
+                    rides.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+                    
+                    const dateObj = new Date(day + 'T00:00:00');
+                    const dateStr = dateObj.toLocaleDateString('hr-HR', {
+                        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                    });
+                    
+                    return `
+                        <div class="day-group">
+                            <div class="day-header">
+                                <span>📅 ${dateStr}</span>
+                                <span class="day-count">${rides.length} ${rides.length === 1 ? 'vožnja' : 'vožnji'}</span>
+                            </div>
+                            ${rides.map(r => `
+                                <div class="ride-item">
+                                    <span class="ride-time">${r.time}</span>
+                                    <span class="ride-line ${isTram ? 'tram' : ''}">${r.line}</span>
+                                    <span class="ride-dest">${r.dest || 'Nepoznato'}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            main.innerHTML = `
+                <h3>GBR ${gbr}</h3>
+                <div class="vehicle-info">
+                    <strong>${item.model || 'Nepoznato'}</strong>${item.reg ? ` · ${item.reg}` : ''}<br>
+                    Ukupno vožnji: <strong>${totalRides}</strong> · 
+                    ${isTram ? '🚋 Tramvaj' : '🚌 Autobus'}
+                </div>
+                ${ridesHtml}
+            `;
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        async function init() {
+            await loadRoutes();
+            await loadStops();
+            await loadVehicles();
+            
+            setupSearch();
+            
+            setInterval(loadVehicles, REFRESH_INTERVAL);
+            
+            console.log('🚋 ZETko aplikacija pokrenuta');
+            console.log(`📊 Ukupno vozila u bazi: ${Object.keys(vehicleDatabase).length}`);
+        }
+
+        init();
+    </script>
+</body>
+</html>
