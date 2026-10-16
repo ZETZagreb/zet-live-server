@@ -178,6 +178,27 @@
             box-shadow: 0 0 0 4px rgba(76, 29, 149, 0.4);
             z-index: 1000 !important;
         }
+        .bus-icon.search-highlight {
+            background: #999999 !important;
+            border-color: #666666 !important;
+            color: white !important;
+            animation: searchPulse 1.5s infinite;
+            z-index: 2000 !important;
+            box-shadow: 0 0 0 6px rgba(153, 153, 153, 0.4);
+        }
+        @keyframes searchPulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(153, 153, 153, 0.4);
+            }
+            50% {
+                transform: scale(1.25);
+                box-shadow: 0 0 0 12px rgba(153, 153, 153, 0.15);
+            }
+        }
+        .bus-icon.search-highlight .bus-arrow {
+            color: white !important;
+        }
 
         .bus-arrow {
             position: absolute; top: -8px; left: 50%;
@@ -420,7 +441,6 @@
         }
         .vr-item:hover { background: #f3f4f6; }
         .vr-item.active { background: #4c1d95; color: white; }
-        .vr-item.active .vr-line-info { color: rgba(255,255,255,0.7); }
         .vr-badge {
             background: #4c1d95; color: white;
             padding: 3px 10px; border-radius: 6px;
@@ -430,16 +450,13 @@
         .vr-item.active .vr-badge {
             background: white; color: #4c1d95;
         }
-        .vr-line-info {
-            font-size: 11px; color: #6b7280;
-            flex: 1;
-        }
         .vr-live-dot {
             width: 8px; height: 8px;
             border-radius: 50%;
             background: #16a34a;
             box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
             animation: pulse-dot 2s infinite;
+            margin-left: auto;
         }
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; }
@@ -462,6 +479,19 @@
             border-bottom: 1px solid #e5e7eb;
         }
         .vr-main .vr-info strong { color: #4c1d95; }
+
+        .vr-line-badge {
+            background: #ff6600;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            margin-left: 8px;
+        }
+        .vr-line-badge.tram {
+            background: #2563eb;
+        }
 
         .vr-departures { list-style: none; }
         .vr-departure {
@@ -501,15 +531,8 @@
             content: '→ '; color: #9ca3af;
         }
         .vr-departure-status {
-            font-size: 12px;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-weight: 600;
+            display: none;
         }
-        .vr-departure-status.ontime { background: #dcfce7; color: #16a34a; }
-        .vr-departure-status.early { background: #fef3c7; color: #d97706; }
-        .vr-departure-status.late { background: #fee2e2; color: #dc2626; }
-        .vr-departure-status.scheduled { background: #f3f4f6; color: #6b7280; }
 
         .vr-empty {
             text-align: center; padding: 60px 20px; color: #9ca3af;
@@ -620,7 +643,7 @@
             <div class="vr-layout">
                 <div class="vr-sidebar">
                     <h3>Popis voznih redova</h3>
-                    <input type="text" class="vr-search" id="vrSearch" placeholder="🔍 Pretraži VR (npr. 101)..." oninput="renderVRList()">
+                    <input type="text" class="vr-search" id="vrSearch" placeholder="🔍 Pretraži V.R. (npr. 101)..." oninput="renderVRList()">
                     <div class="vr-list" id="vrList">
                         <div class="vr-loading">
                             <span class="spinner"></span> Učitavanje...
@@ -1251,6 +1274,7 @@
         let vehicles = {};
         let activeVehicleId = null;
         let highlightedId = null;
+        let searchHighlightedId = null;
         let currentRoutePolyline = null;
         let currentRouteShadow = null;
         let currentStopMarkers = [];
@@ -1366,10 +1390,11 @@
             return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
         }
 
-        function createVehicleIcon(line, type, bearing, isHighlighted) {
+        function createVehicleIcon(line, type, bearing, isHighlighted, isSearchHighlighted) {
             const isTram = type === 0;
             const className = isTram ? 'tram' : 'bus';
             const highlight = isHighlighted ? 'highlighted' : '';
+            const searchHighlight = isSearchHighlighted ? 'search-highlight' : '';
             
             let arrowHtml = '';
             if (bearing !== null && bearing !== undefined && bearing !== 0) {
@@ -1380,7 +1405,7 @@
                 html: `
                     <div style="position: relative;">
                         ${arrowHtml}
-                        <div class="bus-icon ${className} ${highlight}">${line}</div>
+                        <div class="bus-icon ${className} ${highlight} ${searchHighlight}">${line}</div>
                     </div>
                 `,
                 className: '',
@@ -1465,12 +1490,24 @@
                     if (vehicles[p.vehicleId]) {
                         vehicles[p.vehicleId].marker.setLatLng([lat, lng]);
                         vehicles[p.vehicleId].marker.setIcon(
-                            createVehicleIcon(p.routeShortName, p.routeType, p.bearing, p.vehicleId === highlightedId)
+                            createVehicleIcon(
+                                p.routeShortName, 
+                                p.routeType, 
+                                p.bearing, 
+                                p.vehicleId === highlightedId,
+                                p.vehicleId === searchHighlightedId
+                            )
                         );
                         vehicles[p.vehicleId].data = v;
                     } else {
                         const marker = L.marker([lat, lng], {
-                            icon: createVehicleIcon(p.routeShortName, p.routeType, p.bearing, p.vehicleId === highlightedId)
+                            icon: createVehicleIcon(
+                                p.routeShortName, 
+                                p.routeType, 
+                                p.bearing, 
+                                p.vehicleId === highlightedId,
+                                p.vehicleId === searchHighlightedId
+                            )
                         }).addTo(map);
 
                         marker.on('click', () => showVehicleDetails(v));
@@ -1525,18 +1562,35 @@
         // PRIKAŽI VOZILO
         // ============================================================
         async function showVehicleDetails(v) {
+            // Skini search highlight ako je bio aktivan
+            if (searchHighlightedId && searchHighlightedId !== v.id) {
+                clearSearchHighlight();
+            }
+            
             activeVehicleId = v.id;
             highlightedId = v.id;
             
             Object.values(vehicles).forEach(veh => {
                 if (veh.data.id !== v.id) {
-                    veh.marker.setIcon(createVehicleIcon(veh.data.line, veh.data.routeType, veh.data.bearing, false));
+                    veh.marker.setIcon(createVehicleIcon(
+                        veh.data.line, 
+                        veh.data.routeType, 
+                        veh.data.bearing, 
+                        false,
+                        veh.data.id === searchHighlightedId
+                    ));
                     veh.marker.setZIndexOffset(0);
                 }
             });
             
             if (vehicles[v.id]) {
-                vehicles[v.id].marker.setIcon(createVehicleIcon(v.line, v.routeType, v.bearing, true));
+                vehicles[v.id].marker.setIcon(createVehicleIcon(
+                    v.line, 
+                    v.routeType, 
+                    v.bearing, 
+                    true,
+                    v.id === searchHighlightedId
+                ));
                 vehicles[v.id].marker.setZIndexOffset(1000);
             }
             
@@ -1752,7 +1806,13 @@
             
             if (highlightedId && vehicles[highlightedId]) {
                 const v = vehicles[highlightedId].data;
-                vehicles[highlightedId].marker.setIcon(createVehicleIcon(v.line, v.routeType, v.bearing, false));
+                vehicles[highlightedId].marker.setIcon(createVehicleIcon(
+                    v.line, 
+                    v.routeType, 
+                    v.bearing, 
+                    false,
+                    v.id === searchHighlightedId
+                ));
                 vehicles[highlightedId].marker.setZIndexOffset(0);
             }
             highlightedId = null;
@@ -1943,8 +2003,7 @@
             
             if (search) {
                 items = items.filter(item => 
-                    item.vr.includes(search) || 
-                    item.line.includes(search)
+                    item.vr.includes(search)
                 );
             }
             
@@ -1960,7 +2019,6 @@
                 return `
                     <div class="vr-item ${isSelected ? 'active' : ''}" onclick="selectVR('${item.vr}')">
                         <span class="vr-badge">${item.vr}</span>
-                        <span class="vr-line-info">Linija ${item.line}</span>
                         ${item.live ? '<span class="vr-live-dot"></span>' : ''}
                     </div>
                 `;
@@ -1991,46 +2049,38 @@
                 }
                 
                 if (!data || !data.trips) {
-                    main.innerHTML = '<div class="vr-empty"><div class="icon">📭</div><div>Nema podataka za VR ' + vr + '</div></div>';
+                    main.innerHTML = '<div class="vr-empty"><div class="icon">📭</div><div>Nema podataka za V.R. ' + vr + '</div></div>';
                     return;
                 }
                 
                 const firstTrip = data.trips[0];
-                const line = firstTrip ? firstTrip.r : '?';
                 const isTram = firstTrip && firstTrip.t === 'tram';
                 const curIndex = data.cur || -1;
                 
+                // Odredi trenutnu liniju (ona koja je na indeksu "cur" ili prva)
+                let currentLine = firstTrip ? firstTrip.r : '?';
+                if (curIndex >= 0 && data.trips[curIndex]) {
+                    currentLine = data.trips[curIndex].r;
+                }
+                
                 main.innerHTML = `
                     <h3>
-                        VR ${vr}
-                        <span style="font-size:14px;font-weight:500;color:#6b7280;">· Linija ${line}</span>
+                        V.R. ${vr}
+                        <span class="vr-line-badge ${isTram ? 'tram' : ''}">Linija ${currentLine}</span>
                     </h3>
                     <div class="vr-info">
                         <strong>${data.trips.length}</strong> polazaka
-                        ${data.vm ? ` · <strong>${data.vm}</strong>` : ''}
                     </div>
                     <ul class="vr-departures">
                         ${data.trips.map((trip, i) => {
                             const time = formatTime(trip.s);
                             const isCurrent = i === curIndex;
                             
-                            let statusHtml = '';
-                            if (trip.dl === null || trip.dl === undefined) {
-                                statusHtml = '<span class="vr-departure-status scheduled">Predviđeno</span>';
-                            } else if (Math.abs(trip.dl) < 60) {
-                                statusHtml = '<span class="vr-departure-status ontime">Na vrijeme</span>';
-                            } else if (trip.dl > 0) {
-                                statusHtml = `<span class="vr-departure-status late">Kasni ${Math.round(trip.dl/60)} min</span>`;
-                            } else {
-                                statusHtml = `<span class="vr-departure-status early">Rani ${Math.round(Math.abs(trip.dl)/60)} min</span>`;
-                            }
-                            
                             return `
                                 <li class="vr-departure ${isCurrent ? 'current' : ''}">
                                     <span class="vr-departure-time">${time}</span>
                                     <span class="vr-departure-line ${isTram ? 'tram' : 'bus'}">${trip.r}</span>
                                     <span class="vr-departure-dest">${trip.h || 'Nepoznato'}</span>
-                                    ${statusHtml}
                                 </li>
                             `;
                         }).join('')}
@@ -2110,9 +2160,62 @@
             const v = vehicles[vehicleId];
             if (v) {
                 showVehicleDetails(v.data);
+                highlightSearchVehicle(vehicleId);
+                
                 document.getElementById('searchInput').value = '';
                 document.getElementById('searchResults').classList.remove('visible');
             }
+        }
+
+        function highlightSearchVehicle(vehicleId) {
+            searchHighlightedId = vehicleId;
+            
+            Object.values(vehicles).forEach(veh => {
+                const id = veh.data.id;
+                const isHighlighted = id === vehicleId;
+                const vd = veh.data;
+                
+                if (isHighlighted) {
+                    veh.marker.setIcon(createVehicleIcon(
+                        vd.line, 
+                        vd.routeType, 
+                        vd.bearing, 
+                        id === highlightedId,
+                        true
+                    ));
+                    veh.marker.setOpacity(1);
+                    veh.marker.setZIndexOffset(2000);
+                } else {
+                    veh.marker.setIcon(createVehicleIcon(
+                        vd.line, 
+                        vd.routeType, 
+                        vd.bearing, 
+                        id === highlightedId,
+                        false
+                    ));
+                    veh.marker.setOpacity(0.25);
+                    veh.marker.setZIndexOffset(0);
+                }
+            });
+        }
+
+        function clearSearchHighlight() {
+            if (!searchHighlightedId) return;
+            
+            searchHighlightedId = null;
+            
+            Object.values(vehicles).forEach(veh => {
+                const vd = veh.data;
+                veh.marker.setIcon(createVehicleIcon(
+                    vd.line, 
+                    vd.routeType, 
+                    vd.bearing, 
+                    vd.id === highlightedId,
+                    false
+                ));
+                veh.marker.setOpacity(1);
+                veh.marker.setZIndexOffset(vd.id === highlightedId ? 1000 : 0);
+            });
         }
 
         // ============================================================
@@ -2279,6 +2382,14 @@
             await loadVehicles();
             
             setupSearch();
+            
+            // Klik bilo gdje na kartu → skini search highlight
+            map.on('click', function(e) {
+                if (e.originalEvent._stopped) return;
+                if (searchHighlightedId) {
+                    clearSearchHighlight();
+                }
+            });
             
             setInterval(loadVehicles, REFRESH_INTERVAL);
             
