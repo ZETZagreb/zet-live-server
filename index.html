@@ -427,6 +427,28 @@
             margin-bottom: 12px; text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+        .vr-search-tabs {
+            display: flex; gap: 4px;
+            background: #f3f4f6;
+            padding: 4px; border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .vr-search-tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .vr-search-tab.active {
+            background: white;
+            color: #4c1d95;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
         .vr-search {
             width: 100%; padding: 10px 14px;
             border: 1px solid #e5e7eb; border-radius: 8px;
@@ -493,6 +515,29 @@
             background: #2563eb;
         }
 
+        .vr-day-tabs {
+            display: flex; gap: 4px;
+            background: #f3f4f6;
+            padding: 4px; border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        .vr-day-tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .vr-day-tab.active {
+            background: white;
+            color: #4c1d95;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
         .vr-departures { list-style: none; }
         .vr-departure {
             display: flex; align-items: center;
@@ -530,8 +575,13 @@
         .vr-departure-dest::before {
             content: '→ '; color: #9ca3af;
         }
-        .vr-departure-status {
-            display: none;
+        .vr-departure-vr {
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: 600;
+            padding: 2px 8px;
+            background: #f3f4f6;
+            border-radius: 6px;
         }
 
         .vr-empty {
@@ -642,8 +692,12 @@
         <div class="vr-content">
             <div class="vr-layout">
                 <div class="vr-sidebar">
-                    <h3>Popis voznih redova</h3>
-                    <input type="text" class="vr-search" id="vrSearch" placeholder="🔍 Pretraži V.R. (npr. 101)..." oninput="renderVRList()">
+                    <h3>Pretraga</h3>
+                    <div class="vr-search-tabs">
+                        <div class="vr-search-tab active" data-search="vr" onclick="switchVRSearchTab('vr')">Po V.R.</div>
+                        <div class="vr-search-tab" data-search="line" onclick="switchVRSearchTab('line')">Po liniji</div>
+                    </div>
+                    <input type="text" class="vr-search" id="vrSearch" placeholder="🔍 Pretraži V.R. (npr. 101)..." oninput="onVRSearchInput()">
                     <div class="vr-list" id="vrList">
                         <div class="vr-loading">
                             <span class="spinner"></span> Učitavanje...
@@ -653,7 +707,7 @@
                 <div class="vr-main" id="vrMain">
                     <div class="vr-empty">
                         <div class="icon">👈</div>
-                        <div>Odaberi vozni red s popisa</div>
+                        <div>Odaberi vozni red ili upiši liniju</div>
                     </div>
                 </div>
             </div>
@@ -669,6 +723,7 @@
         const API_BASE = 'https://zet.prometko.cyou';
         const REFRESH_INTERVAL = 10000;
         const HISTORY_KEY = 'zetko_rides_v1';
+        const LINE_CACHE_KEY = 'zetko_line_cache_v1';
         const STOPS_ARRIVALS_CACHE = {};
         const STOPS_ARRIVALS_TTL = 30000;
         const VR_LIST_CACHE = { data: null, timestamp: 0, ttl: 300000 };
@@ -1225,7 +1280,7 @@
         };
 
         // ============================================================
-        // TRAMVAJI - GENERIRANJE (bez registracije)
+        // TRAMVAJI - GENERIRANJE
         // ============================================================
         function addTramsToDatabase() {
             for (let i = 301; i <= 350; i++) {
@@ -1280,11 +1335,33 @@
         let currentStopMarkers = [];
         let selectedHistoryVehicle = null;
         let selectedVR = null;
+        let selectedLine = null;
+        let vrSearchMode = 'vr';
         let currentTripStopIds = [];
 
         const shapeCache = {};
         const tripCache = {};
         const vrDetailsCache = {};
+        const lineDetailsCache = {};
+
+        // ============================================================
+        // LINE CACHE (za pretragu po liniji)
+        // ============================================================
+        function loadLineCache() {
+            try {
+                const data = localStorage.getItem(LINE_CACHE_KEY);
+                if (data) return JSON.parse(data);
+            } catch(e) {}
+            return {};
+        }
+
+        function saveLineCache(cache) {
+            try {
+                localStorage.setItem(LINE_CACHE_KEY, JSON.stringify(cache));
+            } catch(e) {}
+        }
+
+        let lineCache = loadLineCache();
 
         // ============================================================
         // POVIJEST VOŽNJI
@@ -1388,6 +1465,31 @@
         function getTodayString() {
             const d = new Date();
             return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        function getWeekdayDate() {
+            // Vraća datum za ponedjeljak ovog tjedna
+            const d = new Date();
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(d.setDate(diff));
+            return `${monday.getFullYear()}${String(monday.getMonth()+1).padStart(2,'0')}${String(monday.getDate()).padStart(2,'0')}`;
+        }
+
+        function getSaturdayDate() {
+            const d = new Date();
+            const day = d.getDay();
+            const diff = d.getDate() - day + 6;
+            const sat = new Date(d.setDate(diff));
+            return `${sat.getFullYear()}${String(sat.getMonth()+1).padStart(2,'0')}${String(sat.getDate()).padStart(2,'0')}`;
+        }
+
+        function getSundayDate() {
+            const d = new Date();
+            const day = d.getDay();
+            const diff = d.getDate() - day;
+            const sun = new Date(d.setDate(diff));
+            return `${sun.getFullYear()}${String(sun.getMonth()+1).padStart(2,'0')}${String(sun.getDate()).padStart(2,'0')}`;
         }
 
         function createVehicleIcon(line, type, bearing, isHighlighted, isSearchHighlighted) {
@@ -1562,7 +1664,6 @@
         // PRIKAŽI VOZILO
         // ============================================================
         async function showVehicleDetails(v) {
-            // Skini search highlight ako je bio aktivan
             if (searchHighlightedId && searchHighlightedId !== v.id) {
                 clearSearchHighlight();
             }
@@ -1958,6 +2059,33 @@
         // ============================================================
         // VOZNI REDOVI (VR)
         // ============================================================
+        function switchVRSearchTab(mode) {
+            vrSearchMode = mode;
+            
+            document.querySelectorAll('.vr-search-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-search="${mode}"]`).classList.add('active');
+            
+            const input = document.getElementById('vrSearch');
+            if (mode === 'vr') {
+                input.placeholder = '🔍 Pretraži V.R. (npr. 101)...';
+            } else {
+                input.placeholder = '🔍 Pretraži liniju (npr. 160)...';
+            }
+            
+            input.value = '';
+            onVRSearchInput();
+        }
+
+        function onVRSearchInput() {
+            const search = document.getElementById('vrSearch').value.trim();
+            
+            if (vrSearchMode === 'vr') {
+                renderVRList();
+            } else {
+                searchByLine(search);
+            }
+        }
+
         async function loadVRList(forceRefresh = false) {
             const list = document.getElementById('vrList');
             list.innerHTML = '<div class="vr-loading"><span class="spinner"></span> Učitavanje...</div>';
@@ -2027,6 +2155,7 @@
 
         async function selectVR(vr) {
             selectedVR = vr;
+            selectedLine = null;
             renderVRList();
             await renderVRDetails(vr);
         }
@@ -2036,60 +2165,297 @@
             main.innerHTML = '<div class="vr-loading"><span class="spinner"></span> Učitavanje polazaka...</div>';
             
             try {
-                const date = getTodayString();
-                let data;
+                // Dohvati za radni dan, subotu, nedjelju
+                const dateToday = getTodayString();
+                const dateSat = getSaturdayDate();
+                const dateSun = getSundayDate();
+                const dateMon = getWeekdayDate();
                 
-                const cacheKey = `${vr}_${date}`;
-                if (vrDetailsCache[cacheKey]) {
-                    data = vrDetailsCache[cacheKey];
-                } else {
-                    const resp = await fetch(`/proxy/vr/${vr}?date=${date}`);
-                    data = await resp.json();
+                const cacheKey = `${vr}_multiday`;
+                let data = vrDetailsCache[cacheKey];
+                
+                if (!data) {
+                    const [resToday, resSat, resSun, resMon] = await Promise.all([
+                        fetch(`/proxy/vr/${vr}?date=${dateToday}`).then(r => r.json()).catch(() => null),
+                        fetch(`/proxy/vr/${vr}?date=${dateSat}`).then(r => r.json()).catch(() => null),
+                        fetch(`/proxy/vr/${vr}?date=${dateSun}`).then(r => r.json()).catch(() => null),
+                        fetch(`/proxy/vr/${vr}?date=${dateMon}`).then(r => r.json()).catch(() => null)
+                    ]);
+                    
+                    data = {
+                        weekday: resMon,
+                        saturday: resSat,
+                        sunday: resSun,
+                        today: resToday
+                    };
                     vrDetailsCache[cacheKey] = data;
                 }
                 
-                if (!data || !data.trips) {
+                if (!data.today || !data.today.trips) {
                     main.innerHTML = '<div class="vr-empty"><div class="icon">📭</div><div>Nema podataka za V.R. ' + vr + '</div></div>';
                     return;
                 }
                 
-                const firstTrip = data.trips[0];
+                const firstTrip = data.today.trips[0];
                 const isTram = firstTrip && firstTrip.t === 'tram';
-                const curIndex = data.cur || -1;
+                const curIndex = data.today.cur || -1;
                 
-                // Odredi trenutnu liniju (ona koja je na indeksu "cur" ili prva)
                 let currentLine = firstTrip ? firstTrip.r : '?';
-                if (curIndex >= 0 && data.trips[curIndex]) {
-                    currentLine = data.trips[curIndex].r;
+                if (curIndex >= 0 && data.today.trips[curIndex]) {
+                    currentLine = data.today.trips[curIndex].r;
                 }
+                
+                // Odredi koji je danas dan u tjednu
+                const today = new Date().getDay();
+                let activeDayTab = 'weekday';
+                if (today === 6) activeDayTab = 'saturday';
+                else if (today === 0) activeDayTab = 'sunday';
                 
                 main.innerHTML = `
                     <h3>
                         V.R. ${vr}
-                        <span class="vr-line-badge ${isTram ? 'tram' : ''}">Linija ${currentLine}</span>
+                        <span class="vr-line-badge ${isTram ? 'tram' : ''}">Trenutno: linija ${currentLine}</span>
                     </h3>
-                    <div class="vr-info">
-                        <strong>${data.trips.length}</strong> polazaka
+                    <div class="vr-day-tabs">
+                        <div class="vr-day-tab ${activeDayTab === 'weekday' ? 'active' : ''}" onclick="switchVRDayTab('${vr}', 'weekday')">Radni dan</div>
+                        <div class="vr-day-tab ${activeDayTab === 'saturday' ? 'active' : ''}" onclick="switchVRDayTab('${vr}', 'saturday')">Subota</div>
+                        <div class="vr-day-tab ${activeDayTab === 'sunday' ? 'active' : ''}" onclick="switchVRDayTab('${vr}', 'sunday')">Nedjelja</div>
                     </div>
-                    <ul class="vr-departures">
-                        ${data.trips.map((trip, i) => {
-                            const time = formatTime(trip.s);
-                            const isCurrent = i === curIndex;
-                            
-                            return `
-                                <li class="vr-departure ${isCurrent ? 'current' : ''}">
-                                    <span class="vr-departure-time">${time}</span>
-                                    <span class="vr-departure-line ${isTram ? 'tram' : 'bus'}">${trip.r}</span>
-                                    <span class="vr-departure-dest">${trip.h || 'Nepoznato'}</span>
-                                </li>
-                            `;
-                        }).join('')}
-                    </ul>
+                    <div id="vrDayContent">
+                        ${renderVRDayContent(data[activeDayTab], isTram)}
+                    </div>
                 `;
             } catch (e) {
                 console.error('Greška VR details:', e);
                 main.innerHTML = '<div class="vr-empty"><div class="icon">❌</div><div>Greška pri učitavanju</div></div>';
             }
+        }
+
+        function renderVRDayContent(dayData, isTram) {
+            if (!dayData || !dayData.trips || dayData.trips.length === 0) {
+                return '<div class="vr-empty"><div class="icon">📭</div><div>Nema polazaka za odabrani dan</div></div>';
+            }
+            
+            const curIndex = dayData.cur || -1;
+            
+            return `
+                <div class="vr-info">
+                    <strong>${dayData.trips.length}</strong> polazaka
+                </div>
+                <ul class="vr-departures">
+                    ${dayData.trips.map((trip, i) => {
+                        const time = formatTime(trip.s);
+                        const isCurrent = i === curIndex;
+                        
+                        return `
+                            <li class="vr-departure ${isCurrent ? 'current' : ''}">
+                                <span class="vr-departure-time">${time}</span>
+                                <span class="vr-departure-line ${isTram ? 'tram' : 'bus'}">${trip.r}</span>
+                                <span class="vr-departure-dest">${trip.h || 'Nepoznato'}</span>
+                            </li>
+                        `;
+                    }).join('')}
+                </ul>
+            `;
+        }
+
+        function switchVRDayTab(vr, day) {
+            document.querySelectorAll('.vr-day-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.vr-day-tab').forEach(t => {
+                if (t.textContent.toLowerCase().includes(day === 'weekday' ? 'radni' : (day === 'saturday' ? 'subota' : 'nedjelja'))) {
+                    t.classList.add('active');
+                }
+            });
+            
+            const cacheKey = `${vr}_multiday`;
+            const data = vrDetailsCache[cacheKey];
+            if (!data) return;
+            
+            const firstTrip = data.today?.trips?.[0];
+            const isTram = firstTrip && firstTrip.t === 'tram';
+            
+            const content = document.getElementById('vrDayContent');
+            content.innerHTML = renderVRDayContent(data[day], isTram);
+        }
+
+        // ============================================================
+        // PRETRAGA PO LINIJI
+        // ============================================================
+        async function searchByLine(lineNumber) {
+            const list = document.getElementById('vrList');
+            
+            if (!lineNumber || lineNumber.length < 1) {
+                if (!VR_LIST_CACHE.data) {
+                    list.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Nema podataka</div>';
+                    return;
+                }
+                renderVRList();
+                return;
+            }
+            
+            list.innerHTML = '<div class="vr-loading"><span class="spinner"></span> Tražim VR-ove za liniju ' + lineNumber + '...</div>';
+            
+            const main = document.getElementById('vrMain');
+            main.innerHTML = `
+                <div class="vr-loading">
+                    <span class="spinner"></span> 
+                    Pretražujem liniju ${lineNumber} kroz sve VR-ove...
+                </div>
+            `;
+            
+            // 1. Pronađi VR-ove iz aktivnih vozila koja voze tu liniju
+            const matchingVRs = new Set();
+            
+            // Iz trenutnih vozila
+            Object.values(vehicles).forEach(v => {
+                const vd = v.data;
+                if (vd.line === lineNumber && vd.blockId) {
+                    matchingVRs.add(vd.blockId);
+                }
+            });
+            
+            // Iz VR liste (ako je live)
+            if (VR_LIST_CACHE.data) {
+                VR_LIST_CACHE.data.forEach(item => {
+                    if (item.live) {
+                        matchingVRs.add(item.vr);
+                    }
+                });
+            }
+            
+            // Iz cache-a
+            const cachedLines = lineCache[lineNumber] || {};
+            Object.keys(cachedLines).forEach(vr => matchingVRs.add(vr));
+            
+            console.log(`🔍 Pronađeno ${matchingVRs.size} VR-ova za liniju ${lineNumber} (aktivni + cache)`);
+            
+            // 2. Dohvati polaske za sve VR-ove
+            const allDepartures = [];
+            const vrIds = Array.from(matchingVRs);
+            
+            // Ako nema aktivnih, probaj pretražiti sve iz VR liste
+            if (vrIds.length === 0 && VR_LIST_CACHE.data) {
+                // Uzmi prvih 20 VR-ova i provjeri
+                const firstVRs = VR_LIST_CACHE.data.slice(0, 30);
+                for (const item of firstVRs) {
+                    vrIds.push(item.vr);
+                }
+            }
+            
+            const results = await Promise.all(
+                vrIds.map(async (vr) => {
+                    try {
+                        // Provjeri cache
+                        const cacheKey = `${vr}_today`;
+                        let vrData = vrDetailsCache[cacheKey];
+                        
+                        if (!vrData) {
+                            const resp = await fetch(`/proxy/vr/${vr}?date=${getTodayString()}`);
+                            vrData = await resp.json();
+                            vrDetailsCache[cacheKey] = vrData;
+                        }
+                        
+                        if (!vrData || !vrData.trips) return [];
+                        
+                        // Filtriraj polaske koji odgovaraju liniji
+                        const matching = vrData.trips.filter(t => t.r === lineNumber);
+                        
+                        return matching.map(t => ({
+                            vr: vr,
+                            time: t.s,
+                            dest: t.h,
+                            line: t.r,
+                            isTram: t.t === 'tram'
+                        }));
+                    } catch (e) {
+                        return [];
+                    }
+                })
+            );
+            
+            // Spoji sve
+            results.forEach(r => allDepartures.push(...r));
+            
+            // Sortiraj po vremenu
+            allDepartures.sort((a, b) => a.time - b.time);
+            
+            // Dedupliciraj (isti VR + isto vrijeme)
+            const seen = new Set();
+            const unique = allDepartures.filter(d => {
+                const key = `${d.vr}_${d.time}_${d.dest}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+            
+            // 3. Spremi u cache
+            if (!lineCache[lineNumber]) lineCache[lineNumber] = {};
+            unique.forEach(d => {
+                lineCache[lineNumber][d.vr] = true;
+            });
+            saveLineCache(lineCache);
+            
+            // 4. Prikaži
+            if (unique.length === 0) {
+                main.innerHTML = `
+                    <div class="vr-empty">
+                        <div class="icon">📭</div>
+                        <div>Nema polazaka za liniju ${lineNumber} u trenutnim VR-ovima</div>
+                        <div style="margin-top:12px;font-size:12px;color:#9ca3af;">
+                            ℹ️ Prikazuju se samo VR-ovi koji su trenutno aktivni.<br>
+                            S vremenom (kroz par dana) cache će se popuniti.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Grupiraj po smjeru
+            const byDest = {};
+            unique.forEach(d => {
+                const dest = d.dest || 'Nepoznato';
+                if (!byDest[dest]) byDest[dest] = [];
+                byDest[dest].push(d);
+            });
+            
+            let html = `
+                <h3>
+                    Linija ${lineNumber}
+                    <span class="vr-line-badge">${unique.length} polazaka</span>
+                </h3>
+                <div class="vr-info">
+                    Prikazani polasci iz <strong>${Object.keys(byDest).length}</strong> smjerova
+                </div>
+            `;
+            
+            // Prikaži sve polaske sortirano po vremenu
+            html += `<ul class="vr-departures">`;
+            unique.forEach(d => {
+                const time = formatTime(d.time);
+                html += `
+                    <li class="vr-departure">
+                        <span class="vr-departure-time">${time}</span>
+                        <span class="vr-departure-line ${d.isTram ? 'tram' : 'bus'}">${d.line}</span>
+                        <span class="vr-departure-dest">${d.dest || 'Nepoznato'}</span>
+                        <span class="vr-departure-vr">V.R. ${d.vr}</span>
+                    </li>
+                `;
+            });
+            html += `</ul>`;
+            
+            main.innerHTML = html;
+            
+            // Ažuriraj listu lijevo da prikaže VR-ove koji voze tu liniju
+            list.innerHTML = `
+                <div style="padding:8px 12px;font-size:12px;color:#6b7280;border-bottom:1px solid #f3f4f6;">
+                    VR-ovi koji voze liniju ${lineNumber}:
+                </div>
+                ${Object.keys(byDest).length > 0 ? Array.from(new Set(unique.map(d => d.vr))).sort((a,b) => Number(a) - Number(b)).map(vr => `
+                    <div class="vr-item" onclick="selectVR('${vr}')">
+                        <span class="vr-badge">${vr}</span>
+                    </div>
+                `).join('') : '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Nema VR-ova</div>'}
+            `;
         }
 
         function openVR() {
@@ -2101,6 +2467,7 @@
         function closeVR() {
             document.getElementById('vrPanel').classList.remove('visible');
             selectedVR = null;
+            selectedLine = null;
         }
 
         // ============================================================
@@ -2383,7 +2750,6 @@
             
             setupSearch();
             
-            // Klik bilo gdje na kartu → skini search highlight
             map.on('click', function(e) {
                 if (e.originalEvent._stopped) return;
                 if (searchHighlightedId) {
