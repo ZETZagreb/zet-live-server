@@ -2476,7 +2476,7 @@
                 // ============================================================
         // PRETRAGA
         // ============================================================
-        function setupSearch() {
+                function setupSearch() {
             const input = document.getElementById('searchInput');
             const results = document.getElementById('searchResults');
             
@@ -2485,6 +2485,8 @@
                 if (!query) { results.classList.remove('visible'); return; }
                 
                 const matches = [];
+                const isNumeric = /^\d+$/.test(query); // Je li upit broj?
+                
                 Object.values(vehicles).forEach(v => {
                     const d = v.data;
                     const vInfo = vehicleDatabase[d.id] || {};
@@ -2494,35 +2496,31 @@
                     const model = (vInfo.model || '').toLowerCase();
                     const reg = (vInfo.reg || '').toLowerCase();
                     
-                    let score = 0; // Veći score = viši prioritet
+                    let score = 0;
                     
-                    // 1. TOČAN GBR (najveći prioritet)
-                    if (gbr === query) {
-                        score = 1000;
-                    }
-                    // 2. GBR POČINJE S UPITOM
-                    else if (gbr.startsWith(query)) {
-                        score = 500;
-                    }
-                    // 3. GBR SADRŽI UPIT
-                    else if (gbr.includes(query)) {
-                        score = 300;
-                    }
-                    // 4. LINIJA TOČNO ODGOVARA
-                    else if (line === query) {
-                        score = 400;
-                    }
-                    // 5. LINIJA POČINJE S UPITOM
-                    else if (line.startsWith(query)) {
-                        score = 200;
-                    }
-                    // 6. ODREDIŠTE SADRŽI UPIT
-                    else if (dest.includes(query)) {
-                        score = 100;
-                    }
-                    // 7. MARKA ILI REGISTRACIJA SADRŽI UPIT
-                    else if (model.includes(query) || reg.includes(query)) {
-                        score = 50;
+                    if (isNumeric) {
+                        // AKO JE BROJ - traži SAMO po GBR-u
+                        if (gbr === query) {
+                            score = 1000; // Točan GBR
+                        } else if (gbr.startsWith(query)) {
+                            score = 500; // GBR počinje s upitom
+                        } else if (line === query) {
+                            score = 400; // Točna linija
+                        } else if (line.startsWith(query)) {
+                            score = 200; // Linija počinje s upitom
+                        }
+                        // Ne traži u tripId, blockId, model, reg...
+                    } else {
+                        // AKO JE TEKST - traži po svim poljima
+                        if (model.includes(query)) {
+                            score = 100;
+                        } else if (dest.includes(query)) {
+                            score = 90;
+                        } else if (line.includes(query)) {
+                            score = 80;
+                        } else if (reg.includes(query)) {
+                            score = 70;
+                        }
                     }
                     
                     if (score > 0) {
@@ -2530,9 +2528,7 @@
                     }
                 });
                 
-                // Sortiraj po score-u (najviši prvi)
                 matches.sort((a, b) => b.score - a.score);
-                
                 const limited = matches.slice(0, 15);
                 
                 if (limited.length === 0) {
@@ -2557,6 +2553,11 @@
                 
                 results.classList.add('visible');
             });
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-box')) results.classList.remove('visible');
+            });
+        }
             
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.search-box')) results.classList.remove('visible');
