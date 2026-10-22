@@ -2473,6 +2473,9 @@
         // ============================================================
         // PRETRAGA
         // ============================================================
+                // ============================================================
+        // PRETRAGA
+        // ============================================================
         function setupSearch() {
             const input = document.getElementById('searchInput');
             const results = document.getElementById('searchResults');
@@ -2485,14 +2488,50 @@
                 Object.values(vehicles).forEach(v => {
                     const d = v.data;
                     const vInfo = vehicleDatabase[d.id] || {};
-                    if (d.id.toLowerCase().includes(query) || 
-                        d.line.toLowerCase().includes(query) || 
-                        d.dest.toLowerCase().includes(query) ||
-                        (vInfo.model || '').toLowerCase().includes(query) ||
-                        (vInfo.reg || '').toLowerCase().includes(query)) {
-                        matches.push(d);
+                    const line = d.line.toLowerCase();
+                    const dest = d.dest.toLowerCase();
+                    const gbr = d.id.toLowerCase();
+                    const model = (vInfo.model || '').toLowerCase();
+                    const reg = (vInfo.reg || '').toLowerCase();
+                    
+                    let score = 0; // Veći score = viši prioritet
+                    
+                    // 1. TOČAN GBR (najveći prioritet)
+                    if (gbr === query) {
+                        score = 1000;
+                    }
+                    // 2. GBR POČINJE S UPITOM
+                    else if (gbr.startsWith(query)) {
+                        score = 500;
+                    }
+                    // 3. GBR SADRŽI UPIT
+                    else if (gbr.includes(query)) {
+                        score = 300;
+                    }
+                    // 4. LINIJA TOČNO ODGOVARA
+                    else if (line === query) {
+                        score = 400;
+                    }
+                    // 5. LINIJA POČINJE S UPITOM
+                    else if (line.startsWith(query)) {
+                        score = 200;
+                    }
+                    // 6. ODREDIŠTE SADRŽI UPIT
+                    else if (dest.includes(query)) {
+                        score = 100;
+                    }
+                    // 7. MARKA ILI REGISTRACIJA SADRŽI UPIT
+                    else if (model.includes(query) || reg.includes(query)) {
+                        score = 50;
+                    }
+                    
+                    if (score > 0) {
+                        matches.push({ data: d, score: score });
                     }
                 });
+                
+                // Sortiraj po score-u (najviši prvi)
+                matches.sort((a, b) => b.score - a.score);
                 
                 const limited = matches.slice(0, 15);
                 
@@ -2503,13 +2542,14 @@
                 }
                 
                 results.innerHTML = limited.map(m => {
-                    const vInfo = vehicleDatabase[m.id] || {};
+                    const d = m.data;
+                    const vInfo = vehicleDatabase[d.id] || {};
                     return `
-                        <div class="search-result-item" onclick="selectSearchResult('${m.id}')">
-                            <span class="search-result-badge ${m.routeType === 0 ? '' : 'bus'}">${m.line}</span>
+                        <div class="search-result-item" onclick="selectSearchResult('${d.id}')">
+                            <span class="search-result-badge ${d.routeType === 0 ? '' : 'bus'}">${d.line}</span>
                             <div class="search-result-info">
-                                <div><strong>GBR ${m.id}</strong></div>
-                                <small>${vInfo.model || ''} → ${m.dest}</small>
+                                <div><strong>GBR ${d.id}</strong></div>
+                                <small>${vInfo.model || ''} → ${d.dest}</small>
                             </div>
                         </div>
                     `;
